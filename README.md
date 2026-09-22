@@ -16,8 +16,8 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm audit:static
-$env:NEXT_PUBLIC_BASE_PATH="/sqloptima-static"
-$env:NEXT_PUBLIC_SITE_URL="https://rsharma155.github.io/sqloptima-static"
+$env:NEXT_PUBLIC_BASE_PATH=""
+$env:NEXT_PUBLIC_SITE_URL="https://sqloptima.github.io"
 pnpm build
 ```
 
@@ -27,7 +27,7 @@ The static site is written to `out/`. The GitHub Actions workflow builds and dep
 
 In repository **Settings → Pages**, select **GitHub Actions** as the source. With this repository name, the default URL is:
 
-`https://rsharma155.github.io/sqloptima-static/`
+`https://sqloptima.github.io/`
 
 GitHub reserves `OWNER.github.io` root sites for a repository named exactly `OWNER.github.io`. Therefore `https://sqloptima.github.io/` requires ownership of the `sqloptima` GitHub account and a repository named `sqloptima.github.io`, or an independently owned custom domain.
 

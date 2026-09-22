@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
@@ -32,10 +33,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm audit:static
-      - name: Build project-site export
+      - name: Build organization-site export
         env:
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
-          NEXT_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          NEXT_PUBLIC_BASE_PATH: ""
+          NEXT_PUBLIC_SITE_URL: https://sqloptima.github.io
         run: pnpm build
       - uses: actions/upload-pages-artifact@v3
         with:
