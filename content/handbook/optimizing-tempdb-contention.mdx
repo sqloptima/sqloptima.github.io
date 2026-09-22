@@ -1,0 +1,23 @@
+---
+title: Optimizing TempDB Contention
+description: Reduce allocation and metadata contention in SQL Server TempDB.
+summary: Practical checks when TempDB waits dominate SQL Server workloads.
+date: 2026-07-10
+published: true
+---
+
+When PAGELATCH waits cluster on TempDB, start by confirming file count, autogrowth
+settings, and spilled sorts.
+
+Trace classic patterns: too few data files, uneven growth events, and version store
+pressure from long transactions.
+
+Validate with wait stats and file IO stall metrics before changing configuration in
+production.
+
+```sql
+-- example check
+SELECT wait_type, waiting_tasks_count
+FROM sys.dm_os_wait_stats
+WHERE wait_type LIKE 'PAGELATCH%';
+```

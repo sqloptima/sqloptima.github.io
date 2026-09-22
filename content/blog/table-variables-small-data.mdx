@@ -1,0 +1,18 @@
+---
+title: Table variables for small, known rowsets
+description: Keep tiny lookup sets in memory — and know when a temp table is safer.
+summary: Table variables shine for small fixed lists; skip them for large unknown sets.
+date: 2026-08-02
+published: true
+category: Query Tuning
+subcategory: Table variable for small data
+---
+
+Dummy guide: table variables are not "faster temp tables."
+
+Use `@table` when the row count is small and predictable (config lists, id batches under a few
+hundred). Prefer `#temp` when cardinality is unknown, when you need statistics-driven plans, or
+when you will index intermediate results.
+
+On modern SQL Server versions, deferred compilation helps table variables — still verify with
+actual row counts before promoting a pattern across the codebase.

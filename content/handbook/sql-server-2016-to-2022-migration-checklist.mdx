@@ -1,0 +1,43 @@
+---
+title: SQL Server 2016 to 2022 Migration Checklist
+description: Phase-gated migration checklist from initiation and discovery through UAT, cutover, stabilization, and rollback.
+summary: Interactive P0–P8 checklist for SQL Server 2016 → 2022 migrations.
+date: 2026-08-03
+published: true
+---
+
+Migrations fail less from tooling and more from skipped gates. Work the phases in order and keep rollback rehearsed.
+
+[Open interactive Migration Checklist](/knowledgebase/sql-server-2016-to-2022-migration-checklist.html)
+
+## Phase map
+
+| Phase | Focus |
+| --- | --- |
+| P0 Initiation | Scope, owners, success criteria, change window |
+| P1 Discovery | Inventory, dependencies, deprecated features, sizing |
+| P2 Target design | Hardware/VM, storage, HA/DR, compatibility strategy |
+| P3 Build target | Install, configure, security, baseline monitoring |
+| P4 UAT pilot | Restore rehearsals, app tests, Query Store baselines |
+| P5 Prod prep | Freeze plan, communication, rollback authority |
+| P6 Cutover | Execute migration, validate apps, watch waits |
+| P7 Stabilization | Performance triage, forced plans, debt tickets |
+| P8 Rollback | Documented reverse path if exit criteria fail |
+
+The interactive guide also includes a dashboard and script library for the engagement.
+
+## After restore, before compat 160
+
+Keep production at compatibility level **130** until Query Store has a baseline, then remediate regressions in UAT. See the [Compat 160 post-migration playbook](/handbook/sql-server-post-migration-compat160).
+
+```sql
+SELECT name, compatibility_level, is_query_store_on
+FROM sys.databases
+WHERE name = DB_NAME();
+```
+
+## Related guides
+
+- [Compat 160 post-migration tweaks](/handbook/sql-server-post-migration-compat160)
+- [SQL Server installation checklist](/handbook/sql-server-installation-checklist)
+- [HADR checklist](/handbook/sql-server-hadr-checklist)

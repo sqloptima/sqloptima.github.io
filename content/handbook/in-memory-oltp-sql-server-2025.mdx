@@ -1,0 +1,35 @@
+---
+title: In-Memory OLTP lab (SQL Server 2025)
+description: Create a MEMORY_OPTIMIZED_DATA filegroup, a durable table, then fully undeploy XTP on SQL Server 2025.
+summary: Hekaton deploy and last-container removal with sys.dm_db_xtp_undeploy_status.
+date: 2026-09-07
+published: true
+---
+
+Use this with the [blog walkthrough](/blog/in-memory-oltp-sql-server-2025) and the downloadable
+[HTML lab guide](/labs/InMemoryOLTP_SQL2025_Lab_Guide.html). Requires SQL Server 2025 (17.x)
+for last-container and filegroup removal.
+
+## Deploy (lab database `InMemoryOLTP_Demo`)
+
+1. Create ROW-store data and log files under a lab root (`C:\SQLLab\InMemoryOLTP` or `D:\SQLLab\InMemoryOLTP`).
+2. `ALTER DATABASE ... ADD FILEGROUP ... CONTAINS MEMORY_OPTIMIZED_DATA`.
+3. `ADD FILE` whose `FILENAME` is a **container folder** under `XTP\`, not an `.ndf`.
+4. Create `dbo.CustomerMemory` with `MEMORY_OPTIMIZED = ON`, `DURABILITY = SCHEMA_AND_DATA`, and a nonclustered PK.
+5. Confirm `sys.dm_db_xtp_table_memory_stats` and `deployment_state` 1 or 2.
+
+## Undeploy
+
+Drop every memory-optimized table, natively compiled module, and memory-optimized type. Then remove
+the last container (`ALTER DATABASE ... REMOVE FILE`). Poll:
+
+```sql
+SELECT deployment_state, deployment_state_desc, undeploy_lsn, start_of_log_lsn
+FROM sys.dm_db_xtp_undeploy_status;
+```
+
+State 3 needs checkpoint and log truncation (`start_of_log_lsn` past `undeploy_lsn`). State 6 means
+rerun `REMOVE FILE`. When the container is gone, `REMOVE FILEGROUP`. Success is `deployment_state = 0`.
+
+Do not keep a database snapshot. Do not treat a long `REMOVE FILE` as a hang until you have read the
+undeploy DMV. Script 001 destroys an existing `InMemoryOLTP_Demo`.

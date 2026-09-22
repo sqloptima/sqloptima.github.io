@@ -1,0 +1,12 @@
+---
+title: Blocking chains beat single-query blame
+description: Latency often starts with a blocker, not the query that timed out.
+summary: Always capture the head blocker when waits spike.
+date: 2026-07-14
+published: true
+---
+
+The statement that timed out is frequently a victim, not the root cause.
+
+When `LCK_*` waits rise, identify the head of the blocking chain and the transaction that holds it.
+Tools that only list slow queries without blockers send teams down the wrong rabbit hole.

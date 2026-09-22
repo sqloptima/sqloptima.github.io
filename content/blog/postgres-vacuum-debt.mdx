@@ -1,0 +1,12 @@
+---
+title: Postgres vacuum debt compounds quietly
+description: Autovacuum lag turns into bloat and then into planner lies.
+summary: Watch freeze age and dead tuples before users feel the pain.
+date: 2026-07-22
+published: true
+---
+
+Vacuum debt rarely announces itself with a single alert.
+
+Track dead tuple ratios, freeze age, and wraparound risk. Couple that with index bloat signals so
+maintenance is scheduled against evidence, not folklore.

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL Server 2025 In-Memory OLTP Lab Guide</title>
+  <style>
+    :root {
+      --ink: #1b2430;
+      --muted: #4b5563;
+      --line: #d6dde6;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --accent: #0b5cab;
+      --accent-dark: #083e75;
+      --warn-bg: #fff7e8;
+      --warn-border: #e2b657;
+      --danger-bg: #fdeeee;
+      --danger-border: #d46a6a;
+      --ok-bg: #eef8f1;
+      --ok-border: #6aaa7d;
+      --code-bg: #0f1720;
+      --code-fg: #e8eef5;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+    header.doc {
+      background: #ffffff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-left: 8px solid var(--accent);
+      border-radius: 14px;
+      padding: 36px 36px 28px;
+      margin-bottom: 28px;
+    }
+    header.doc p.kicker,
+    header.doc h1,
+    header.doc p.sub {
+      color: var(--ink);
+    }
+    header.doc p.kicker {
+      margin: 0 0 8px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-dark);
+    }
+    header.doc h1 { margin: 0 0 10px; font-size: 30px; line-height: 1.2; }
+    header.doc p.sub { margin: 0; max-width: 760px; color: var(--muted); }
+    nav.toc {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 28px;
+    }
+    nav.toc h2 { margin: 0 0 10px; font-size: 16px; }
+    nav.toc ol { margin: 0; padding-left: 20px; }
+    nav.toc a { color: var(--accent); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px 28px 8px;
+      margin-bottom: 18px;
+    }
+    h2 { margin-top: 0; color: var(--accent-dark); border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+    h3 { color: var(--ink); }
+    p, li { color: var(--ink); }
+    .muted { color: var(--muted); }
+    .callout {
+      border-left: 5px solid var(--accent);
+      background: #eef5fb;
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .callout.warn { border-left-color: #c79012; background: var(--warn-bg); }
+    .callout.danger { border-left-color: #b42318; background: var(--danger-bg); }
+    .callout.ok { border-left-color: #2f7d4a; background: var(--ok-bg); }
+    .callout strong { display: block; margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 14.5px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eef3f8; }
+    code, kbd {
+      font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
+      font-size: 90%;
+    }
+    kbd {
+      background: #eef2f6;
+      border: 1px solid #c9d3de;
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-fg);
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    ol.steps > li { margin-bottom: 10px; }
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 8px;
+    }
+    @media print {
+      body { background: #fff; }
+      .wrap { max-width: none; padding: 0; }
+      header.doc, section, nav.toc { break-inside: avoid; box-shadow: none; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc">
+      <p class="kicker">SQL Server 2025 lab documentation</p>
+      <h1>In-Memory OLTP: create, use, and fully undeploy</h1>
+      <p class="sub">
+        Step-by-step guide for the two scripts in this folder. Script 001 creates a demo database with a
+        MEMORY_OPTIMIZED_DATA filegroup, a container, and a durable memory-optimized table.
+        Script 002 drops In-Memory objects and removes the last container and filegroup so the XTP engine can stop.
+        Full undeploy of the last memory-optimized container is supported starting in SQL Server 2025 (17.x).
+      </p>
+    </header>
+
+    <nav class="toc">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#purpose">Purpose and what changed in SQL Server 2025</a></li>
+        <li><a href="#files">Files in this folder</a></li>
+        <li><a href="#prereq">Prerequisites</a></li>
+        <li><a href="#folders">Folders and paths to create first</a></li>
+        <li><a href="#script001">Part A — Create the database and memory-optimized table</a></li>
+        <li><a href="#script002">Part B — Remove In-Memory objects, container, and filegroup</a></li>
+        <li><a href="#states">How to read <code>sys.dm_db_xtp_undeploy_status</code></a></li>
+        <li><a href="#last-container">Completing last-container removal</a></li>
+        <li><a href="#verify">Verification queries</a></li>
+        <li><a href="#notes">Notes, limitations, and cleanup</a></li>
+        <li><a href="#refs">Microsoft references</a></li>
+      </ol>
+    </nav>
+
+    <section id="purpose">
+      <h2>1. Purpose and what changed in SQL Server 2025</h2>
+      <p>
+        In-Memory OLTP (also called Hekaton or XTP) stores selected tables in memory and persists them through a special
+        filegroup of type <code>MEMORY_OPTIMIZED_DATA</code>. That filegroup holds one or more <strong>containers</strong>
+        (folders on disk), not ordinary data files.
+      </p>
+      <p>
+        On SQL Server 2022 and earlier, after you dropped every memory-optimized object you still could not remove the
+        last container and the memory-optimized filegroup. The In-Memory OLTP engine stayed loaded for that database.
+      </p>
+      <p>
+        Starting with <strong>SQL Server 2025 (17.x)</strong>, you can remove every memory-optimized container and then
+        the filegroup when no In-Memory objects remain. When that completes,
+        <code>sys.dm_db_xtp_undeploy_status.deployment_state</code> is <code>0</code> and the XTP engine is stopped
+        for the database.
+      </p>
+      <div class="callout">
+        <strong>What this lab proves</strong>
+        End-to-end enablement of In-Memory OLTP, a small durable table and workload, then the Microsoft-supported
+        undeploy path (drop objects → remove last container → remove filegroup).
+      </div>
+    </section>
+
+    <section id="files">
+      <h2>2. Files in this folder</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>001_create_db_FG_XTP_tables.sql</code></td>
+            <td>Creates database <code>InMemoryOLTP_Demo</code>, adds the XTP filegroup and container, creates
+              <code>dbo.CustomerMemory</code>, loads sample rows, and reports XTP memory usage.</td>
+          </tr>
+          <tr>
+            <td><code>002_remove_files_FG_XTP.sql</code></td>
+            <td>Drops the memory-optimized table, takes backups, removes the last XTP container, then removes the
+              filegroup. Includes status checks and extra log backups that help log truncation during undeploy.</td>
+          </tr>
+          <tr>
+            <td><code>InMemoryOLTP_SQL2025_Lab_Guide.html</code></td>
+            <td>This document. Open in a browser, or open in Microsoft Word and save as <code>.docx</code> if you need Word format.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="prereq">
+      <h2>3. Prerequisites</h2>
+      <ol>
+        <li><strong>SQL Server 2025 (17.x) or later.</strong> Last-container and filegroup removal is not supported on 2022 and earlier.</li>
+        <li>Permissions to create and drop databases, add/remove files and filegroups, back up databases and logs, and issue <code>CHECKPOINT</code>.</li>
+        <li>SQL Server Management Studio (SSMS), Azure Data Studio, or sqlcmd. Two query windows are useful for Part B.</li>
+        <li>The SQL Server service account must have Modify permission on the folders listed in section 4.</li>
+        <li>The demo database uses the default recovery model of <code>model</code> (usually FULL). Part B assumes you can take log backups so the log can truncate during undeploy.</li>
+        <li>Do not keep a database snapshot of <code>InMemoryOLTP_Demo</code>. Microsoft does not support container removal while snapshots exist. Drop snapshots first.</li>
+      </ol>
+      <div class="callout warn">
+        <strong>Do not run this on a production database as written</strong>
+        Script 001 drops <code>InMemoryOLTP_Demo</code> if it already exists. Script 002 permanently drops
+        <code>dbo.CustomerMemory</code>. Adjust names and paths before using the pattern on any other database.
+      </div>
+    </section>
+
+    <section id="folders">
+      <h2>4. Folders and paths to create first</h2>
+      <p>
+        Not every machine has a <code>D:</code> drive. Choose the lab root from the number of local disks, then use that
+        same root in <strong>both</strong> SQL scripts (every <code>FILENAME</code> and <code>TO DISK</code> path).
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Windows disks</th>
+            <th>Lab root to use</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Only <code>C:</code> (typical laptop)</td>
+            <td><code>C:\SQLLab\InMemoryOLTP</code></td>
+          </tr>
+          <tr>
+            <td><code>C:</code> and <code>D:</code> (or more data disks)</td>
+            <td><code>D:\SQLLab\InMemoryOLTP</code> — keeps lab files off the OS volume when a second drive exists</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The SQL scripts are written with <code>C:\SQLLab\InMemoryOLTP</code>. If the snippet below selects
+        <code>D:</code>, search-and-replace <code>C:\SQLLab\InMemoryOLTP</code> with
+        <code>D:\SQLLab\InMemoryOLTP</code> in both <code>.sql</code> files before you run them.
+        The SQL Server service account needs Modify permission on that folder tree.
+      </p>
+      <p>Run this PowerShell <strong>on the SQL Server host</strong>. It picks <code>D:</code> when that drive exists, otherwise <code>C:</code>, creates the folders, and prints the root to copy into the scripts:</p>
+      <pre>$labDrive = if (Test-Path -Path 'D:\') { 'D:' } else { 'C:' }
+$labRoot  = Join-Path $labDrive 'SQLLab\InMemoryOLTP'
+
+New-Item -ItemType Directory -Force -Path @(
+    (Join-Path $labRoot 'Data'),
+    (Join-Path $labRoot 'Log'),
+    (Join-Path $labRoot 'XTP')
+) | Out-Null
+
+Write-Host "Lab root: $labRoot"
+Write-Host "In both SQL scripts, every path must start with: $labRoot"</pre>
+      <table>
+        <thead>
+          <tr>
+            <th>Folder under the lab root</th>
+            <th>Used for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Data\</code></td>
+            <td>Primary data file <code>InMemoryOLTP_Demo.mdf</code></td>
+          </tr>
+          <tr>
+            <td><code>Log\</code></td>
+            <td>Transaction log <code>InMemoryOLTP_Demo.ldf</code></td>
+          </tr>
+          <tr>
+            <td><code>XTP\</code></td>
+            <td>Parent folder. SQL Server creates the container folder <code>XTPContainer</code> here.</td>
+          </tr>
+          <tr>
+            <td>(lab root itself)</td>
+            <td>Backup files written by script 002</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Container FILENAME is a folder, not an .ndf file</strong>
+        In script 001 the XTP file is <code>FILENAME = N'&lt;lab-root&gt;\XTP\XTPContainer'</code>
+        (for example <code>C:\SQLLab\InMemoryOLTP\XTP\XTPContainer</code> or
+        <code>D:\SQLLab\InMemoryOLTP\XTP\XTPContainer</code>).
+        After creation you should see a directory at that path containing checkpoint and delta files, not a single data file.
+      </div>
+    </section>
+
+    <section id="script001">
+      <h2>5. Part A — Create the database and memory-optimized table</h2>
+      <p><strong>Script:</strong> <code>001_create_db_FG_XTP_tables.sql</code></p>
+      <p>
+        Run the entire script in one window connected to the SQL Server instance (context starts in <code>master</code>).
+        Recommended isolation: do not run this against a shared instance that already has a database named
+        <code>InMemoryOLTP_Demo</code> unless you intend to destroy it.
+      </p>
+
+      <h3>5.1 Drop an existing demo database (if present)</h3>
+      <p>
+        If <code>InMemoryOLTP_Demo</code> exists, the script sets it to <code>SINGLE_USER</code> with
+        <code>ROLLBACK IMMEDIATE</code> and drops it. That disconnects other sessions and discards the previous lab.
+      </p>
+
+      <h3>5.2 Create the database (ROW store files only)</h3>
+      <p>
+        The database is created with a 256 MB primary file and 256 MB log, both growing by 128 MB. At this point there
+        is no In-Memory filegroup yet.
+      </p>
+
+      <h3>5.3 Add the MEMORY_OPTIMIZED_DATA filegroup</h3>
+      <pre>ALTER DATABASE InMemoryOLTP_Demo
+ADD FILEGROUP InMemoryOLTP_Demo_XTP
+CONTAINS MEMORY_OPTIMIZED_DATA;</pre>
+      <p>
+        A database may have only one filegroup of this type. Adding it (and then a container) deploys the In-Memory OLTP
+        engine for the database.
+      </p>
+
+      <h3>5.4 Add the memory-optimized container</h3>
+      <pre>ALTER DATABASE InMemoryOLTP_Demo
+ADD FILE
+(
+    NAME = N'InMemoryOLTP_Demo_XTP_Container',
+    FILENAME = N'C:\SQLLab\InMemoryOLTP\XTP\XTPContainer'  -- or D:\SQLLab\... if a D: drive exists
+)
+TO FILEGROUP InMemoryOLTP_Demo_XTP;</pre>
+      <p>
+        <code>NAME</code> is the logical name used later in <code>ALTER DATABASE ... REMOVE FILE</code>.
+        <code>FILENAME</code> is the container folder on disk.
+      </p>
+
+      <h3>5.5 Verify files and filegroups</h3>
+      <p>
+        The script queries <code>sys.database_files</code> joined to <code>sys.filegroups</code>. Confirm you see:
+      </p>
+      <ul>
+        <li>ROWS file <code>InMemoryOLTP_Demo_Data</code> on PRIMARY</li>
+        <li>LOG file <code>InMemoryOLTP_Demo_Log</code></li>
+        <li>FILESTREAM / memory-optimized container <code>InMemoryOLTP_Demo_XTP_Container</code> on filegroup
+          <code>InMemoryOLTP_Demo_XTP</code> (<code>type_desc</code> is typically <code>FILESTREAM</code> for the container)</li>
+      </ul>
+      <p>Optional extra check after the filegroup exists:</p>
+      <pre>USE InMemoryOLTP_Demo;
+SELECT deployment_state, deployment_state_desc
+FROM sys.dm_db_xtp_undeploy_status;
+-- Expect deployment_state 1 or 2 while XTP is deployed.</pre>
+
+      <h3>5.6 Create the durable memory-optimized table</h3>
+      <p>The script switches to <code>InMemoryOLTP_Demo</code> and creates:</p>
+      <ul>
+        <li><code>dbo.CustomerMemory</code> with <code>MEMORY_OPTIMIZED = ON</code></li>
+        <li><code>DURABILITY = SCHEMA_AND_DATA</code> (schema and data survive restart; needs the XTP container)</li>
+        <li>Required nonclustered primary key on <code>CustomerID</code></li>
+        <li>Nonclustered index on <code>CustomerCode</code></li>
+      </ul>
+      <p>
+        Memory-optimized tables cannot use a clustered B-tree primary key. A hash or nonclustered (range) index is required.
+      </p>
+
+      <h3>5.7 Load data and generate a small workload</h3>
+      <ol>
+        <li>Five named customers (<code>CUST001</code> … <code>CUST005</code>).</li>
+        <li>A loop inserting 10,000 additional rows (<code>CUST000001</code> …). This is enough to show checkpoint files and memory stats; it is not a performance benchmark.</li>
+      </ol>
+
+      <h3>5.8 Check XTP memory usage</h3>
+      <p>
+        The closing query reads <code>sys.dm_db_xtp_table_memory_stats</code> (table + index memory in KB).
+        Non-zero values confirm the table is resident in the In-Memory engine.
+      </p>
+      <div class="callout ok">
+        <strong>Part A success criteria</strong>
+        Database exists; XTP filegroup and container exist; <code>dbo.CustomerMemory</code> has about 10,005 rows;
+        memory stats are greater than zero; <code>deployment_state</code> is 1 or 2.
+      </div>
+    </section>
+
+    <section id="script002">
+      <h2>6. Part B — Remove In-Memory objects, container, and filegroup</h2>
+      <p><strong>Script:</strong> <code>002_remove_files_FG_XTP.sql</code></p>
+      <p>
+        Microsoft’s supported order is: confirm XTP is deployed → drop all In-Memory objects → remove all containers
+        (last container starts undeploy, which can be long-running) → remove the filegroup → confirm
+        <code>deployment_state = 0</code>.
+      </p>
+      <div class="callout danger">
+        <strong>Data loss</strong>
+        Dropping <code>dbo.CustomerMemory</code> permanently deletes that table’s data. Script 002 takes a full backup
+        after the drop, which is useful for the database shell but does not restore the dropped table’s rows unless you
+        already had a backup from Part A. If you need the table data, take a full backup <em>before</em> running script 002.
+      </div>
+
+      <h3>6.1 Recommended session layout</h3>
+      <ol>
+        <li><strong>Window 1:</strong> run script 002 (or step through it).</li>
+        <li><strong>Window 2:</strong> keep ready for the extra <code>BACKUP LOG</code> while <code>REMOVE FILE</code> is running, as noted in the script comments.</li>
+      </ol>
+      <p>Connect both windows to the same instance. Window 1 starts in <code>master</code>.</p>
+
+      <h3>6.2 Drop every In-Memory OLTP object</h3>
+      <p>The lab only created a table, so the script runs:</p>
+      <pre>DROP TABLE IF EXISTS InMemoryOLTP_Demo.dbo.CustomerMemory;</pre>
+      <p>On a real database you must also drop:</p>
+      <ul>
+        <li>All memory-optimized tables (<code>sys.tables.is_memory_optimized = 1</code>)</li>
+        <li>All natively compiled modules (<code>sys.all_sql_modules.uses_native_compilation = 1</code>)</li>
+        <li>All memory-optimized table types (<code>sys.table_types.is_memory_optimized = 1</code>)</li>
+      </ul>
+      <p>Use the inventory queries in Microsoft’s article (also copied in section 8) before you remove files.</p>
+
+      <h3>6.3 Backups before and during undeploy</h3>
+      <p>Script 002 then:</p>
+      <ol>
+        <li>Takes a full backup to <code>&lt;lab-root&gt;\InMemoryOLTP_Demonew.BAK</code> (<code>WITH INIT</code> overwrites that file).</li>
+        <li>Takes a log backup to <code>InMemoryOLTP_Demo_Undeploy.trn</code>.</li>
+        <li>Issues <code>CHECKPOINT</code>.</li>
+      </ol>
+      <p>
+        Under FULL recovery, log backups are often required so <code>start_of_log_lsn</code> can move past
+        <code>undeploy_lsn</code>. That is why the script repeats log backups later.
+      </p>
+
+      <h3>6.4 Status check before REMOVE FILE</h3>
+      <p>
+        The script queries <code>InMemoryOLTP_Demo.sys.dm_db_xtp_undeploy_status</code>. At this moment XTP is still
+        deployed (no container has been removed yet), so you typically still see state <code>1</code> or <code>2</code>.
+        The comment about waiting until <code>start_of_log_lsn &gt; undeploy_lsn</code> applies <em>after</em> last-container
+        removal has started (state <code>3</code>), not before the first <code>REMOVE FILE</code>.
+      </p>
+
+      <h3>6.5 Remove the last memory-optimized container</h3>
+      <pre>ALTER DATABASE InMemoryOLTP_Demo
+REMOVE FILE InMemoryOLTP_Demo_XTP_Container;</pre>
+      <p>
+        Removing the <strong>last</strong> container starts XTP undeploy. This statement can run for a long time.
+        Do not treat a long wait as a hang until you have checked <code>deployment_state</code> (section 7).
+      </p>
+      <p>
+        If you cancel or abort this statement, undeploy may be partial. Microsoft documents
+        <code>deployment_state = 6</code> in that case: run <code>REMOVE FILE</code> again to finish.
+      </p>
+      <p>
+        <strong>While Window 1 is still waiting on REMOVE FILE,</strong> use Window 2 (as the script comments say):
+      </p>
+      <pre>BACKUP LOG InMemoryOLTP_Demo
+TO DISK = 'C:\SQLLab\InMemoryOLTP\InMemoryOLTP_Demo_Undeploy_02.trn'  -- or D:\SQLLab\...
+WITH INIT, STATS = 10;</pre>
+      <p>
+        You may also run <code>CHECKPOINT</code> in the demo database from Window 2. Repeat log backup / checkpoint if
+        state stays at 3 (see section 7).
+      </p>
+
+      <h3>6.6 Remove the memory-optimized filegroup</h3>
+      <p>Only after the container is gone:</p>
+      <pre>ALTER DATABASE InMemoryOLTP_Demo
+REMOVE FILEGROUP InMemoryOLTP_Demo_XTP;</pre>
+      <p>If this fails, the container is still present or undeploy has not finished. Check files and <code>deployment_state</code> again.</p>
+
+      <h3>6.7 Confirm the engine stopped</h3>
+      <p>The script switches to the database and queries undeploy status again. Success is:</p>
+      <ul>
+        <li><code>deployment_state = 0</code></li>
+        <li>No XTP container in <code>sys.database_files</code></li>
+        <li>No <code>MEMORY_OPTIMIZED_DATA</code> filegroup in <code>sys.filegroups</code></li>
+      </ul>
+      <p>
+        A final log backup in the script (overwriting <code>InMemoryOLTP_Demo_Undeploy.trn</code>) is optional hygiene
+        after undeploy; it is not what stops the engine.
+      </p>
+      <div class="callout ok">
+        <strong>Part B success criteria</strong>
+        Table gone; last container removed; filegroup removed; <code>deployment_state</code> is 0.
+        SQL Server is no longer running the In-Memory OLTP engine for this database.
+      </div>
+    </section>
+
+    <section id="states">
+      <h2>7. How to read <code>sys.dm_db_xtp_undeploy_status</code></h2>
+      <p>Run this in the user database (or three-part name from <code>master</code>):</p>
+      <pre>SELECT
+    deployment_state,
+    deployment_state_desc,
+    undeploy_lsn,
+    start_of_log_lsn
+FROM sys.dm_db_xtp_undeploy_status;</pre>
+      <table>
+        <thead>
+          <tr>
+            <th>deployment_state</th>
+            <th>Meaning (SQL Server 2025)</th>
+            <th>Typical action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>0</td>
+            <td>XTP is not deployed, or undeploy finished and the engine is stopped.</td>
+            <td>Nothing further for undeploy. If you expected XTP to be on, the filegroup/container is missing.</td>
+          </tr>
+          <tr>
+            <td>1 or 2</td>
+            <td>In-Memory OLTP engine is deployed.</td>
+            <td>Safe to start the Microsoft removal sequence after objects are dropped.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Last-container removal in progress. Waiting on checkpoint and/or log truncation
+              (<code>start_of_log_lsn</code> must pass <code>undeploy_lsn</code>).</td>
+            <td>See section 7.1. <code>CHECKPOINT</code>, log backup, and fix <code>log_reuse_wait_desc</code> if needed.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Active log has passed undeploy LSN; waiting for the final undeploy log record.
+              With availability groups, the record must reach all replicas.</td>
+            <td>Usually completes in seconds. If it sticks, investigate replica apply lag.</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Waiting for the final XTP checkpoint.</td>
+            <td>Run <code>CHECKPOINT</code> in the database to speed this up.</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>REMOVE FILE</code> for the last container was canceled or aborted.</td>
+            <td>Execute <code>ALTER DATABASE ... REMOVE FILE</code> again.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="muted">
+        Always prefer <code>deployment_state_desc</code> on your build if the numeric mapping above ever differs slightly;
+        the actions Microsoft documents for 3, 4, 5, and 6 are the ones this lab follows.
+      </p>
+
+      <h3 id="last-container">7.1 Completing last-container removal (state 3 in detail)</h3>
+      <ol class="steps">
+        <li>If state is 3 and <code>undeploy_lsn</code> is 0, run <code>CHECKPOINT;</code> in the database.</li>
+        <li>If state is 3 and <code>undeploy_lsn</code> is not 0, the log must truncate until
+          <code>start_of_log_lsn</code> is greater than <code>undeploy_lsn</code>. Run <code>CHECKPOINT</code>, wait about
+          a minute, and repeat. Under FULL or BULK_LOGGED recovery, also back up the log (script 002 already does this).</li>
+        <li>If state stays at 3, check why the log will not truncate:
+          <pre>SELECT name, recovery_model_desc, log_reuse_wait_desc
+FROM sys.databases
+WHERE name = N'InMemoryOLTP_Demo';</pre>
+          Common waits: <code>LOG_BACKUP</code> (take another log backup), <code>ACTIVE_TRANSACTION</code> (commit or kill
+          the old transaction), <code>AVAILABILITY_REPLICA</code>, <code>DATABASE_MIRRORING</code>, and others documented
+          under “Factors that can delay log truncation”. If <code>log_reuse_wait_desc</code> is <code>NOTHING</code> but
+          state is still 3, Microsoft still recommends another transaction log backup; more than one may be required.</li>
+        <li>State 4: wait; check AG secondaries if it persists.</li>
+        <li>State 5: <code>CHECKPOINT;</code></li>
+        <li>When the last XTP checkpoint finishes, <code>REMOVE FILE</code> should complete and state becomes 0. Then remove the filegroup.</li>
+      </ol>
+    </section>
+
+    <section id="verify">
+      <h2>8. Verification queries</h2>
+      <h3>8.1 Inventory In-Memory objects (before drop)</h3>
+      <pre>USE InMemoryOLTP_Demo;
+
+SELECT object_id,
+       OBJECT_SCHEMA_NAME(object_id) AS schema_name,
+       name AS table_name
+FROM sys.tables
+WHERE is_memory_optimized = 1;
+
+SELECT object_id,
+       OBJECT_SCHEMA_NAME(object_id) AS schema_name,
+       OBJECT_NAME(object_id) AS module_name
+FROM sys.all_sql_modules
+WHERE uses_native_compilation = 1;
+
+SELECT SCHEMA_NAME(schema_id) AS type_schema_name,
+       name AS type_name,
+       OBJECT_NAME(type_table_object_id) AS type_table_name
+FROM sys.table_types
+WHERE is_memory_optimized = 1;</pre>
+
+      <h3>8.2 Files and filegroups</h3>
+      <pre>USE InMemoryOLTP_Demo;
+SELECT df.name, df.type_desc, df.physical_name, fg.name AS filegroup_name, fg.type_desc AS fg_type
+FROM sys.database_files AS df
+LEFT JOIN sys.filegroups AS fg
+    ON df.data_space_id = fg.data_space_id;</pre>
+
+      <h3>8.3 Row count after Part A</h3>
+      <pre>SELECT COUNT(*) AS customer_rows FROM InMemoryOLTP_Demo.dbo.CustomerMemory;</pre>
+    </section>
+
+    <section id="notes">
+      <h2>9. Notes, limitations, and cleanup</h2>
+      <ul>
+        <li><strong>SQL Server version:</strong> last container/filegroup removal requires 2025+. Creating In-Memory objects works on earlier versions that support In-Memory OLTP; undeploy of the last container does not.</li>
+        <li><strong>Database snapshots:</strong> drop them before <code>REMOVE FILE</code> on XTP containers.</li>
+        <li><strong>Always On:</strong> state 4 may wait until undeploy records apply on every replica.</li>
+        <li><strong>Canceled REMOVE FILE:</strong> state 6 — rerun the same <code>REMOVE FILE</code>.</li>
+        <li><strong>SSMS alternative:</strong> containers can be removed on the Files page of Database Properties; the filegroup on the Filegroups page. The T-SQL in script 002 is the repeatable lab path.</li>
+        <li><strong>Script 001 is not idempotent in a friendly way:</strong> it destroys any existing <code>InMemoryOLTP_Demo</code>.</li>
+        <li><strong>Workload loop:</strong> 10,000 single-row inserts are for visibility, not throughput testing. A native compiled procedure or batched insert would be used in a real benchmark.</li>
+        <li><strong>After the lab:</strong> <code>DROP DATABASE InMemoryOLTP_Demo;</code> from <code>master</code> if you no longer need it. Delete leftover backup files under your lab root (<code>C:\SQLLab\InMemoryOLTP</code> or <code>D:\SQLLab\InMemoryOLTP</code>) and empty XTP folders if Windows still shows them after a successful REMOVE FILE.</li>
+      </ul>
+      <h3>Suggested run order for someone receiving this folder</h3>
+      <ol>
+        <li>Confirm SQL Server 2025: <code>SELECT @@VERSION;</code></li>
+        <li>Run the PowerShell in section 4. If it prints a <code>D:</code> root, replace <code>C:\SQLLab\InMemoryOLTP</code> with that root in both SQL scripts. Grant the service account access to the folders.</li>
+        <li>Open <code>001_create_db_FG_XTP_tables.sql</code>, confirm every file path uses the same lab root, then execute.</li>
+        <li>Run the verification queries. Optionally take a full backup if you want a restore point with table data.</li>
+        <li>Open two SSMS windows. Run <code>002_remove_files_FG_XTP.sql</code> in window 1; when <code>REMOVE FILE</code> is running, execute the extra <code>BACKUP LOG</code> in window 2.</li>
+        <li>If <code>REMOVE FILE</code> does not return, poll <code>dm_db_xtp_undeploy_status</code> and follow section 7.</li>
+        <li>Confirm state 0 and that the XTP filegroup is gone.</li>
+      </ol>
+    </section>
+
+    <section id="refs">
+      <h2>10. Microsoft references</h2>
+      <ul>
+        <li>
+          Memory-optimized container and filegroup removal (SQL Server 2025+):
+          <a href="https://learn.microsoft.com/en-us/sql/relational-databases/in-memory-oltp/memory-optimized-container-filegroup-removal?view=sql-server-ver17">learn.microsoft.com — memory-optimized-container-filegroup-removal</a>
+        </li>
+        <li>ALTER DATABASE file and filegroup options (ADD/REMOVE FILE and FILEGROUP)</li>
+        <li>Factors that can delay log truncation (<code>sys.databases.log_reuse_wait_desc</code>)</li>
+        <li>Checkpoint operation for memory-optimized tables</li>
+        <li>DROP TABLE, DROP PROCEDURE, DROP TYPE</li>
+      </ul>
+      <p class="muted">
+        This guide documents the scripts as they exist in this folder and maps them to Microsoft’s SQL Server 2025 undeploy
+        procedure. Database and backup file names are lab-specific. Disk paths default to
+        <code>C:\SQLLab\InMemoryOLTP</code>; use <code>D:\SQLLab\InMemoryOLTP</code> when a <code>D:</code> drive exists.
+      </p>
+    </section>
+
+    <footer>
+      In-Memory OLTP SQL Server 2025 lab guide · companion to 001_create_db_FG_XTP_tables.sql and 002_remove_files_FG_XTP.sql
+    </footer>
+  </div>
+</body>
+</html>

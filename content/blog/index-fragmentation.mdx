@@ -1,0 +1,17 @@
+---
+title: Reading index fragmentation without chasing ghosts
+description: Avg fragmentation percent is noisy — combine it with page count and scan patterns.
+summary: Fragmentation only matters when scans or range seeks read many pages.
+date: 2026-08-08
+published: true
+category: Index
+subcategory: Fragmentation
+---
+
+Dummy guide: `avg_fragmentation_in_percent` alone will send you on rebuild hunts.
+
+Filter to indexes with enough pages to matter, then ask whether the workload actually scans or
+range-seeks that index. Point lookups on a fragmented B-tree rarely show up as user latency.
+
+Measure logical fragmentation after large delete/update batches and after heavy autogrowth — those
+are the moments fragmentation usually becomes real.

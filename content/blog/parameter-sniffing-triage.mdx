@@ -1,0 +1,13 @@
+---
+title: Parameter sniffing triage in five minutes
+description: A short checklist when plans flip between good and terrible.
+summary: Confirm sniffed values before rewriting every procedure.
+date: 2026-07-16
+published: true
+---
+
+Start with actual vs estimated rows for the bad plan, then compare sniffed parameters for good and
+bad executions.
+
+Only then decide between recompile hints, optimized plan forcing, or query store plan regression
+controls. Blind `OPTION (RECOMPILE)` everywhere is not a strategy.

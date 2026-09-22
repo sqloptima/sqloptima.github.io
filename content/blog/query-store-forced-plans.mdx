@@ -1,0 +1,18 @@
+---
+title: When (and when not) to force a plan in Query Store
+description: Forced plans stabilize latency, but they freeze a snapshot of assumptions.
+summary: Force only after you can name the regression trigger and a review date.
+date: 2026-08-05
+published: true
+category: Query Store
+subcategory: Forced plan
+---
+
+Dummy guide: plan forcing is a seatbelt, not a destination.
+
+Force a known-good `plan_id` when a regression is user-visible and a proper fix (stats, index,
+rewrite) cannot ship in the same window. Record the query hash, forced plan id, and expiry in
+your runbook.
+
+Revisit forced plans after the next compatibility level change, major stats update, or schema
+deploy — a forced plan can become the new regression.

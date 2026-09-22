@@ -1,0 +1,17 @@
+---
+title: Catching regressed queries with Query Store
+description: Use runtime stats history to find plans that got slower after a deploy or stats change.
+summary: Sort by duration delta, then confirm the plan_id that actually changed.
+date: 2026-08-06
+published: true
+category: Query Store
+subcategory: Regressed queries
+---
+
+Dummy guide: Query Store regression views beat guesswork after a release.
+
+Filter to queries whose average duration or CPU jumped across the change window, open the plan
+history, and note whether the shape changed or only estimates drifted.
+
+If the new plan is consistently worse, force the prior plan only after you understand *why* the
+optimizer flipped — otherwise you paper over a stats or index problem that will return.

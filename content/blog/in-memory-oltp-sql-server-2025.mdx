@@ -1,0 +1,100 @@
+---
+title: In-Memory OLTP on SQL Server 2025 — create, use, and fully undeploy
+description: Hekaton lab for MEMORY_OPTIMIZED_DATA filegroups, durable tables, and last-container removal new in SQL Server 2025.
+summary: Deploy XTP, load a durable memory-optimized table, then stop the engine with the 2025 undeploy path.
+date: 2026-09-07
+published: true
+category: SQL Server
+---
+
+In-Memory OLTP (Hekaton / XTP) stores selected tables in memory and persists them through a `MEMORY_OPTIMIZED_DATA` filegroup. That filegroup holds **containers** (folders on disk), not ordinary `.ndf` files.
+
+On SQL Server 2022 and earlier, dropping every memory-optimized object still left the last container and the filegroup. The XTP engine stayed loaded for that database.
+
+Starting with **SQL Server 2025 (17.x)**, you can remove every memory-optimized container and then the filegroup when no In-Memory objects remain. When that completes, `sys.dm_db_xtp_undeploy_status.deployment_state` is `0` and the XTP engine is stopped for the database.
+
+This post is the public version of the lab in `req_doc/In_Memory_Hekaton`. Download the full HTML guide: [InMemoryOLTP_SQL2025_Lab_Guide.html](/labs/InMemoryOLTP_SQL2025_Lab_Guide.html). Operational notes also live in the [handbook lab](/handbook/in-memory-oltp-sql-server-2025).
+
+SQLHelps, DTRG, and Flextecs already use SQLOptima **Monitoring**, **Schema Compare**, and **Backup** in production work. This lab is the same style of playbook: scripts you can run, states you can query, and a stop condition you can prove.
+
+## Do not run this on production as written
+
+Script 001 drops `InMemoryOLTP_Demo` if it exists. Script 002 drops `dbo.CustomerMemory`. Last-container removal requires SQL Server 2025+. Drop database snapshots before `REMOVE FILE` on XTP containers.
+
+## Folders first
+
+Create `Data`, `Log`, and `XTP` under `C:\SQLLab\InMemoryOLTP` (or `D:\SQLLab\InMemoryOLTP` if a `D:` drive exists). The SQL Server service account needs Modify on that tree. The container `FILENAME` is a **folder**, for example `C:\SQLLab\InMemoryOLTP\XTP\XTPContainer`.
+
+## Part A — deploy
+
+1. Create the database with ROW-store files only.
+2. Add the memory-optimized filegroup:
+
+```sql
+ALTER DATABASE InMemoryOLTP_Demo
+ADD FILEGROUP InMemoryOLTP_Demo_XTP
+CONTAINS MEMORY_OPTIMIZED_DATA;
+```
+
+3. Add the container (folder path, not an `.ndf`):
+
+```sql
+ALTER DATABASE InMemoryOLTP_Demo
+ADD FILE
+(
+    NAME = N'InMemoryOLTP_Demo_XTP_Container',
+    FILENAME = N'C:\SQLLab\InMemoryOLTP\XTP\XTPContainer'
+)
+TO FILEGROUP InMemoryOLTP_Demo_XTP;
+```
+
+4. Create a durable table with a **nonclustered** primary key (`MEMORY_OPTIMIZED = ON`, `DURABILITY = SCHEMA_AND_DATA`). Memory-optimized tables cannot use a clustered B-tree PK.
+5. Load a handful of named customers, then about 10,000 extra rows so checkpoint files and memory stats are visible. This is not a throughput benchmark.
+6. Confirm `sys.dm_db_xtp_table_memory_stats` is non-zero. `deployment_state` should be `1` or `2` while XTP is deployed.
+
+## Part B — undeploy (SQL Server 2025)
+
+Microsoft’s order is: drop all In-Memory objects → remove all containers (the last one starts undeploy) → remove the filegroup → confirm `deployment_state = 0`.
+
+The lab table drop is:
+
+```sql
+DROP TABLE IF EXISTS InMemoryOLTP_Demo.dbo.CustomerMemory;
+```
+
+On a real database you must also drop natively compiled modules and memory-optimized table types. Take a full backup **before** the drop if you need the table data. Script 002 backs up after the drop, which keeps the database shell, not the dropped rows.
+
+Then `CHECKPOINT`, log backups, and:
+
+```sql
+ALTER DATABASE InMemoryOLTP_Demo
+REMOVE FILE InMemoryOLTP_Demo_XTP_Container;
+```
+
+Removing the **last** container can run for a long time. Keep a second session ready for extra `BACKUP LOG` while `REMOVE FILE` waits. If you abort that statement, `deployment_state` may be `6` — run `REMOVE FILE` again.
+
+Only after the container is gone:
+
+```sql
+ALTER DATABASE InMemoryOLTP_Demo
+REMOVE FILEGROUP InMemoryOLTP_Demo_XTP;
+```
+
+## How to read `sys.dm_db_xtp_undeploy_status`
+
+| `deployment_state` | Meaning | Typical action |
+| --- | --- | --- |
+| 0 | XTP not deployed, or undeploy finished | Done |
+| 1 or 2 | Engine deployed | Safe to start removal after objects are dropped |
+| 3 | Last-container removal waiting on checkpoint / log truncation | `CHECKPOINT`, log backup; `start_of_log_lsn` must pass `undeploy_lsn` |
+| 4 | Waiting for the final undeploy log record (AGs: all replicas) | Wait; check replica lag |
+| 5 | Waiting for the final XTP checkpoint | `CHECKPOINT` |
+| 6 | Last `REMOVE FILE` was canceled | Run `REMOVE FILE` again |
+
+If state stays at 3, check `sys.databases.log_reuse_wait_desc` (`LOG_BACKUP`, `ACTIVE_TRANSACTION`, `AVAILABILITY_REPLICA`, and so on).
+
+## Why this belongs on sqloptima
+
+**Monitor** the XTP memory DMVs and undeploy state. **Compare** lab vs production schemas before you copy the pattern. **Recover** with backups and a proven engine-stop, not a leftover filegroup that keeps Hekaton loaded.
+
+Continue with the [In-Memory OLTP handbook lab](/handbook/in-memory-oltp-sql-server-2025) and review every cleanup statement before running it outside a disposable environment.

@@ -1,0 +1,18 @@
+---
+title: Finding used and unused indexes before you drop anything
+description: How to separate indexes that earn their keep from ones that only slow writes.
+summary: Pair seek/scan usage with write cost before marking an index unused.
+date: 2026-08-10
+published: true
+category: Index
+subcategory: Used / unused index
+---
+
+Dummy guide: treat "unused" as a hypothesis, not a verdict.
+
+Cross-check `sys.dm_db_index_usage_stats` against a full workload window (not a quiet weekend),
+then confirm the index is absent from Query Store plans and missing-index recommendations that
+would recreate it.
+
+Keep indexes that protect unique constraints or cover critical point lookups even when seek counts
+look low — write amplification is the trade-off you are optimizing, not a vanity metric.

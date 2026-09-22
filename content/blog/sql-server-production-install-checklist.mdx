@@ -1,0 +1,26 @@
+---
+title: A production SQL Server install checklist that survives audits
+description: Why install day should follow a gated checklist covering storage, TempDB, memory, MAXDOP, backups, and security.
+summary: Install once against a checklist so day-two ops is boring.
+date: 2026-08-03
+published: true
+---
+
+Most “mystery” production issues are decisions made on install day: too few TempDB files, CTFP left at 5, max memory set to the whole box, Instant File Initialization skipped, or Query Store never enabled.
+
+A gated installation checklist turns those into explicit yes/no steps before the first user database lands.
+
+## What the checklist forces you to decide
+
+- Storage layout and formatting before setup runs
+- Service accounts and least-privilege permissions
+- Memory, MAXDOP, and cost threshold for parallelism
+- TempDB sizing, equal files, and growth policy
+- Backup compression, maintenance, Agent jobs, and alerts
+- Security surface area, protocols, and monitoring baseline
+
+## Start here
+
+- [SQL Server installation checklist (handbook)](/handbook/sql-server-installation-checklist)
+- [Interactive checklist](/knowledgebase/sql-server-installation-checklist.html)
+- [DBA Production Handbook](/handbook/sql-server-dba-production-handbook)

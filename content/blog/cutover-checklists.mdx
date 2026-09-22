@@ -1,0 +1,19 @@
+---
+title: Cutover checklists for engine migrations
+description: The boring list that prevents dramatic go-live nights.
+summary: Baseline, rehearse, verify, then cut — in that order.
+date: 2026-07-26
+published: true
+---
+
+Migrations fail less from tooling and more from skipped rehearsal.
+
+Baseline latency and top queries, rehearse cutover with schema compare gates, verify backups, and
+keep a rollback owner. SQLOptima Migration and Monitoring exist to make that checklist measurable.
+
+For SQL Server 2016 → 2022 engagements, use the phase-gated migration checklist and Compat 160
+playbook in the handbook:
+
+- [2016 → 2022 migration checklist](/handbook/sql-server-2016-to-2022-migration-checklist)
+- [Post-migration Compat 160 tweaks](/handbook/sql-server-post-migration-compat160)
+- [Interactive migration checklist](/knowledgebase/sql-server-2016-to-2022-migration-checklist.html)

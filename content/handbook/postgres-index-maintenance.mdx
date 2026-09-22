@@ -1,0 +1,20 @@
+---
+title: PostgreSQL Index Maintenance
+description: Keep PostgreSQL indexes healthy without reckless rebuilds.
+summary: Bloat signals, REINDEX strategy, and how to keep planners honest.
+date: 2026-07-18
+published: true
+---
+
+Watch for unused indexes, bloat estimates, and planner regressions after large deletes.
+
+Prefer targeted `REINDEX CONCURRENTLY` on hot paths; avoid weekend-wide rebuild rituals.
+
+Pair index work with vacuum discipline and realistic statistics targets.
+
+```sql
+SELECT schemaname, relname, idx_scan, idx_tup_read
+FROM pg_stat_user_indexes
+ORDER BY idx_scan ASC
+LIMIT 20;
+```

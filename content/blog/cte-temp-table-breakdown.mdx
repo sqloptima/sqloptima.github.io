@@ -1,0 +1,18 @@
+---
+title: Breaking complex logic with CTEs and temp tables
+description: Stage intermediate results so the optimizer can estimate each step honestly.
+summary: Use CTEs for clarity; materialize with temp tables when estimates go wild.
+date: 2026-08-03
+published: true
+category: Query Tuning
+subcategory: CTE and temp table
+---
+
+Dummy guide: nested views and mega-queries hide bad estimates.
+
+Rewrite the monster into named CTE stages for humans, then materialize expensive stages into
+`#temp` tables when the optimizer keeps underestimating. Index the temp when the next step
+filters or joins on it more than once.
+
+Do not assume every CTE is materialized — in SQL Server it usually is not. Measure with actual
+plans, not folklore.

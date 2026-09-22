@@ -1,0 +1,12 @@
+---
+title: Observability for DBAs is still SQL-shaped
+description: OpenTelemetry helps, but wait stats still matter.
+summary: Bridge app traces with database wait and plan evidence.
+date: 2026-08-01
+published: true
+---
+
+Distributed traces tell you which service slowed down. They do not explain latch contention.
+
+Keep database-native telemetry first-class: waits, plans, IO stalls, and lock graphs. Then correlate
+with traces when the path crosses app tiers.

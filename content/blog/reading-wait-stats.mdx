@@ -1,0 +1,14 @@
+---
+title: Reading wait stats without drowning in noise
+description: A practical filter for SQL Server wait stats during incident triage.
+summary: Focus on runnable waits that explain user-visible latency.
+date: 2026-07-28
+published: true
+---
+
+Start with waits that correlate to application timeouts, not every counter that moved.
+
+Sort by cumulative wait time, exclude benign noise (like `SLEEP_TASK`), and pair the top
+waiters with a slow-query sample from the same window.
+
+SQLOptima Monitoring surfaces this pairing so DBAs can move from symptom to statement faster.

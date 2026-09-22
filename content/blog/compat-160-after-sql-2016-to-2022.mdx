@@ -1,0 +1,33 @@
+---
+title: Compat 160 is slow after a 2016 to 2022 restore
+description: Why SQL Server apps regress at compatibility level 160 and the Query Store-first remediation path.
+summary: Keep CL 130, baseline with Query Store, then fix CE regressions before cutover.
+date: 2026-08-03
+published: true
+---
+
+You restore a SQL Server 2016 database onto SQL Server 2022. The application is fine at compatibility level **130**. You flip to **160** and latency spikes.
+
+That pattern is usually **Cardinality Estimator and optimizer plan change**, not a broken migration. Compatibility 160 turns on a newer CE, different transformations, and Intelligent Query Processing features that can reshape joins, grants, and parallelism for the same T-SQL.
+
+## Do this first
+
+1. Leave production at **130** until Query Store holds a golden plan set
+2. Capture 3–7 days of plans under real load
+3. Reproduce at **160** in UAT with the same workload
+4. Force last-good plans or apply scoped CE bridges for top regressions
+5. Refresh statistics (FULLSCAN on hot tables) and align MAXDOP / CTFP / TempDB
+6. Cut over only after rollback to 130 is rehearsed
+
+```sql
+-- Emergency rollback
+ALTER DATABASE [YourDB] SET COMPATIBILITY_LEVEL = 130;
+```
+
+## Full playbook
+
+The handbook article walks the phased path and links the interactive guide plus the SQL script package:
+
+- [Post-migration Compat 160 tweaks](/handbook/sql-server-post-migration-compat160)
+- [Interactive playbook](/knowledgebase/sql-server-post-migration-compat160.html)
+- [2016 → 2022 migration checklist](/handbook/sql-server-2016-to-2022-migration-checklist)

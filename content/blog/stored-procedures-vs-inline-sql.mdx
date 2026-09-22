@@ -1,0 +1,159 @@
+---
+title: SQL Server stored procedures vs inline SQL
+description: When parameterized inline SQL wins for microservices, where SPs still belong, and how to implement both without plan-cache disasters.
+summary: The real fight is disciplined parameterized SQL versus undisciplined string-built queries — not SP versus inline.
+date: 2026-08-03
+published: true
+---
+
+For years DBAs and developers argued past each other. DBAs wanted stored procedures for plan stability, hotfixes, and a single place to tune. Developers wanted SQL in the app for version control, CI, and service ownership.
+
+In a monolith with shared databases, SPs often won by default. In microservices with a database per service, shared procedures and cross-database joins fight the architecture. Logic moves to the application layer — but that does not mean “throw SQL into a string and ship.”
+
+The useful question is not **SP or inline**. It is **disciplined parameterized SQL versus undisciplined ad hoc SQL**.
+
+## What problem does inline SQL solve?
+
+Inline SQL (parameterized batches owned by the application) solves ownership and delivery friction:
+
+- **Bounded contexts** — each service owns its queries; no shared `dbo.usp_*` library coupling services
+- **Deploy velocity** — query changes ship with the service binary/config, not a separate DB release gate for every tweak
+- **Version control** — the exact SQL that ran in prod is in the same PR as the C# that calls it
+- **Testability** — integration tests can assert the SQL shape and parameters without deploying procedures first
+- **Less hidden coupling** — views/procs shared across apps are a classic source of “who broke reporting?” incidents
+
+It does **not** magically remove the need for indexes, statistics, or query review. It moves the contract into the service that owns the data.
+
+## Benefits of well-done inline SQL
+
+When teams use Dapper (or careful ADO.NET) with parameters:
+
+1. **Plan cache reuse** — SQL Server caches plans for parameterized batches the same way it does for procedures. The myth that “inline never caches” is false for parameterized T-SQL.
+2. **Query Store still works** — force plans, spot regressions, and attribute work by `Application Name` in the connection string.
+3. **One deploy path** — app + SQL change together; fewer “proc v3 / app v2” skew incidents.
+4. **Set-based SQL stays set-based** — you can still send multi-statement batches (temp tables, CTEs) when the relational work belongs in the engine.
+5. **Clear service ownership** — the microservice that owns the table owns the query text.
+
+Stack Overflow–style stacks prove this at scale: almost no procedures, raw parameterized SQL, dumb data store, smart application.
+
+## Issues undisciplined inline creates
+
+Inline done badly is worse than a mediocre SP:
+
+| Failure mode | What happens |
+| --- | --- |
+| String concatenation | Plan cache bloat + SQL injection |
+| ORM N+1 / queries in loops | Network round-trip storms; CPU and locking explode |
+| Business rules in `foreach` with per-row `UPDATE` | Cursor pain, relocated to the app tier |
+| Unreviewed generated SQL | Accidental scans, bad joins, missing filters |
+| No Query Store / no app name | DBAs cannot attribute or force plans |
+
+```csharp
+// Never: builds a unique plan per literal value and invites injection
+var sql = $"SELECT * FROM Policies WHERE Status = '{status}'";
+```
+
+```csharp
+// Always: one parameterized shape, stable plan reuse
+const string sql = "SELECT PolicyId, Status FROM dbo.Policies WHERE Status = @Status";
+await connection.QueryAsync<Policy>(sql, new { Status = status });
+```
+
+Treat concatenation as a build breaker. Parameterization is the floor, not a nice-to-have.
+
+## Where inline is a poor fit (prefer an SP)
+
+Keep work in a stored procedure (owned by that service’s database) when the pattern is procedure-shaped:
+
+### DML and DDL orchestration
+
+Multi-step writes with strict ordering, intermediate checks, and explicit transaction control are easier to reason about as a single proc than as scattered app round-trips. DDL (index rebuilds, partition switches, schema changes) belongs in controlled DB change scripts or admin procedures — not hot-path app SQL.
+
+### Massive loop / cursor-style work
+
+A cursor that walks 50k rows, or an app `foreach` that fires 50k statements, both fail the same way. Prefer set-based T-SQL in an SP, or batch fetch → in-memory logic → bulk write. Do not “migrate” a cursor into chatty inline calls.
+
+### Upsert and MERGE
+
+Idempotent upsert, `MERGE`, and conflict handling with clear locking semantics are high-risk when rewritten ad hoc in the app. A reviewed procedure (or a single well-tested set-based batch) is safer than three competing inline variants.
+
+### Heavy nested queries, temp tables, and CTE pipelines
+
+Deep nesting, `#temp` staging, recursive CTEs, and multi-pass transforms are still valid SQL Server work. You *can* send that as a Dapper batch — but when the batch is large, tuned often, and owned by the DBA for plan stability, an SP is usually the better container:
+
+- Easier to profile and alter without app redeploy when ops owns the hotfix path
+- Clearer permissions (`EXECUTE` on proc vs broad table rights)
+- One object to base-line in Query Store and peer review
+
+### Security and least privilege
+
+If the app should not have direct `SELECT`/`UPDATE` on base tables, procedures remain the permission boundary. Inline assumes the service principal can see the tables it queries.
+
+**Rule of thumb:** simple parameterized reads/writes → inline. Multi-statement orchestration, permission walls, or ops-owned hotfixes → SP.
+
+## How to create and implement inline SQL well
+
+1. **Prefer a micro-ORM or ADO.NET with parameters** — Dapper maps results without hiding the SQL.
+2. **Keep SQL in named constants or small query modules** — not inline in controllers; reviewable and greppable.
+3. **One round-trip when you need related sets** — `QueryMultiple` beats N+1.
+4. **Batch mutations** — chunk reads, process in memory, bulk update; never `SaveChanges` inside a tight loop.
+5. **Enable Query Store** on every service database; set `Application Name=svc-your-api` on connections.
+6. **Reserve the right to SP-ify** — if a hot query cannot be stabilized with indexes, stats, or plan force, promote it to a procedure **owned by that microservice**.
+7. **Ban dynamic SQL built from user input** — if you must build dynamic filters, whitelist columns/operators and still parameterize values.
+
+```csharp
+public async Task<Policy?> GetPolicyWithClaimsAsync(int policyId)
+{
+    const string sql = @"
+        SELECT PolicyId, PolicyNumber, Status
+        FROM dbo.Policies WHERE PolicyId = @PolicyId;
+
+        SELECT ClaimId, ClaimNumber, LossDate
+        FROM dbo.Claims WHERE PolicyId = @PolicyId;";
+
+    await using var connection = new SqlConnection(_connectionString);
+    using var multi = await connection.QueryMultipleAsync(sql, new { PolicyId = policyId });
+    var policy = (await multi.ReadAsync<Policy>()).FirstOrDefault();
+    if (policy is not null)
+        policy.Claims = (await multi.ReadAsync<Claim>()).ToList();
+    return policy;
+}
+```
+
+## Benefits of sticking with stored procedures
+
+SPs still earn their keep:
+
+- **Hotfix without app deploy** — when ops culture expects DB-only emergency changes
+- **Plan and permission control** — grant `EXECUTE`, deny table access; easier audit stories
+- **Encapsulation of complex T-SQL** — one object for MERGE, staging, and multi-result contracts
+- **Familiar tuning surface** — many DBA toolchains and runbooks assume procedure names
+- **Stable API for multiple callers** — when several apps must share one carefully locked write path (less ideal in pure microservices, still common in brownfield)
+
+## Why DBAs still prefer procedures
+
+Preference is usually about **control and blast radius**, not nostalgia:
+
+1. They can see and alter the exact batch without waiting on an app release train
+2. Parameter sniffing and plan forcing workflows are documented against named objects
+3. Table permissions stay tight
+4. Undisciplined ORM SQL has burned them — scans, cache bloat, and injection near-misses
+5. Complex set-based work is still their craft; putting it in a proc keeps ownership clear
+
+Those concerns are legitimate. The answer is not “ban inline.” It is **raise the bar on inline** (parameters, reviews, Query Store, no loops) and **keep SPs for procedure-shaped work**.
+
+## Decision cheat sheet
+
+| Use inline (parameterized) when… | Prefer an SP when… |
+| --- | --- |
+| Service-owned CRUD and reads | Multi-step DML/DDL orchestration |
+| Query ships with the app | Ops needs DB-only hotfix path |
+| Simple filters, joins, projections | Cursor / huge iterative workloads |
+| You can batch and measure | Upsert/MERGE with strict concurrency rules |
+| App identity may access tables | Least-privilege execute-only access |
+
+## Bottom line
+
+Moving off shared procedures is often the right call for microservices. Doing it with string-built SQL and row-by-row updates is how you recreate the old outages in a new repo.
+
+Parameterize everything. Keep heavy orchestration in procedures when it belongs there. Use Query Store on both. The winning side is the team that treats SQL as production code — whether that code lives in a `.sql` proc or a C# constant.

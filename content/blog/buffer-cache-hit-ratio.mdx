@@ -1,0 +1,12 @@
+---
+title: Buffer cache hit ratio is not a silver bullet
+description: Why a high cache hit ratio can still hide latency pain.
+summary: Pair cache metrics with latency and IO stall evidence.
+date: 2026-07-05
+published: true
+---
+
+A 99% buffer cache hit ratio looks healthy until the remaining 1% is cold reads on the hottest path.
+
+Track query latency and physical reads alongside hit ratio. When they diverge, investigate plan
+regressions and working-set churn before adding RAM as the default answer.

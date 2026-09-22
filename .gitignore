@@ -1,0 +1,7 @@
+node_modules/
+.next/
+out/
+public/search-index.json
+*.tsbuildinfo
+.env*
+!.env.example

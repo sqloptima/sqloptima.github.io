@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL 2016 → 2022 Post-Migration Scripts</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a1f2e;
+      --text: #e1e5ee;
+      --muted: #8892a4;
+      --accent: #3b82f6;
+      --border: #2d3748;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 8px; }
+    p { color: var(--muted); }
+    a { color: var(--accent); }
+    ul { padding-left: 1.2rem; }
+    li { margin: 0.4rem 0; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-top: 18px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>SQL Server 2016 → 2022 post-migration scripts</h1>
+    <p>
+      Companion SQL package for the Compat 160 performance playbook.
+      Prefer the interactive guide for guided remediation.
+    </p>
+    <div class="card">
+      <p><a href="../sql-server-post-migration-compat160.html">Open Compat 160 interactive playbook</a></p>
+      <p><a href="./Compat160_Targeted_Fixes.html">Open playbook from this package folder</a></p>
+      <p><a href="/handbook/sql-server-post-migration-compat160">Handbook article on sqloptima</a></p>
+    </div>
+    <div class="card">
+      <strong>Folders</strong>
+      <ul>
+        <li><code>01_Diagnostics/</code> — baselines, waits, plan compare</li>
+        <li><code>02_Configuration/</code> — instance/DB/TempDB settings</li>
+        <li><code>03_QueryStore_PlanForce/</code> — enable QS, regressions, force plans</li>
+        <li><code>04_Statistics_Indexes/</code> — stats and index health</li>
+        <li><code>05_Compatibility_CE_Controls/</code> — CE/IQP controls and cutover runbook</li>
+        <li><code>06_Code_Rewrite_Patterns/</code> — before/after T-SQL patterns</li>
+        <li><code>07_Monitoring_Baseline/</code> — before/after metrics</li>
+        <li><code>docs/</code> — markdown playbooks and client checklist</li>
+      </ul>
+    </div>
+  </main>
+</body>
+</html>

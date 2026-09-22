@@ -1,0 +1,58 @@
+---
+title: SQL Server HADR Checklist
+description: Always On Availability Groups and Windows Server Failover Clustering deployment checklist from planning through failover tests.
+summary: Phase-gated AG/WSFC checklist for production Always On deployments.
+date: 2026-08-03
+published: true
+---
+
+Treat Always On as a sequenced build — infrastructure, cluster, endpoints, AG, listener, then failover proof.
+
+[Open interactive HADR Checklist](/knowledgebase/sql-server-hadr-checklist.html)
+
+## Deployment phases
+
+1. Infrastructure planning
+2. Domain controller configuration
+3. Service accounts
+4. DNS configuration
+5. Network configuration
+6. Join SQL servers to the domain
+7. Install SQL Server
+8. Enable Always On
+9. Install WSFC feature
+10. Validate cluster
+11. Create WSFC cluster
+12. Configure cluster quorum
+13. Configure SQL endpoints
+14. Firewall configuration
+15. Create test database
+16. Backup and restore to secondaries
+17. Create Availability Group
+18. Join secondary replica
+19. Create listener
+20. Test failover
+21. Monitoring & alerts
+22. Documentation & handoff
+
+## Smoke checks after the AG is online
+
+```sql
+SELECT ag.name AS ag_name, ar.replica_server_name, ars.role_desc,
+       ars.operational_state_desc, ars.connected_state_desc,
+       ars.synchronization_health_desc
+FROM sys.availability_groups ag
+JOIN sys.availability_replicas ar ON ar.group_id = ag.group_id
+JOIN sys.dm_hadr_availability_replica_states ars
+  ON ars.replica_id = ar.replica_id;
+
+SELECT db_name(database_id) AS database_name, synchronization_state_desc,
+       synchronization_health_desc, is_suspended, suspend_reason_desc
+FROM sys.dm_hadr_database_replica_states;
+```
+
+## Related guides
+
+- [SQL Server installation checklist](/handbook/sql-server-installation-checklist)
+- [DBA Production Handbook](/handbook/sql-server-dba-production-handbook)
+- [2016 → 2022 migration checklist](/handbook/sql-server-2016-to-2022-migration-checklist)

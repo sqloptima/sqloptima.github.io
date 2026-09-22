@@ -1,0 +1,47 @@
+---
+title: SQL Server Installation Checklist
+description: Production installation checklist from architecture planning through TempDB, memory, MAXDOP, backups, and validation.
+summary: End-to-end SQL Server production install checklist with config and validation gates.
+date: 2026-08-03
+published: true
+---
+
+Build every production instance against a repeatable install checklist — not memory from the last engagement.
+
+[Open interactive Installation Checklist](/knowledgebase/sql-server-installation-checklist.html)
+
+## Coverage map
+
+1. Pre-installation architecture planning
+2. Windows Server preparation & configuration
+3. Storage design and formatting
+4. Service accounts & permissions
+5. SQL Server setup, features, instance & engine config
+6. Data directories, post-install, memory, MAXDOP, CTFP
+7. TempDB, Instant File Initialization, file & log layout
+8. Recovery model, backups, compression, maintenance
+9. SQL Agent, security hardening, network, Database Mail, alerts
+10. Query Store, monitoring baseline, page file, final validation
+11. VM-specific optimization and post-migration slow-server debugging
+
+## Non-negotiable post-setup checks
+
+```sql
+-- Confirm memory / parallelism starting points
+EXEC sp_configure 'show advanced options', 1;
+RECONFIGURE;
+EXEC sp_configure 'max server memory (MB)';
+EXEC sp_configure 'max degree of parallelism';
+EXEC sp_configure 'cost threshold for parallelism';
+
+-- TempDB file count and equal sizing
+SELECT file_id, type_desc, name, size * 8 / 1024 AS size_mb,
+       growth, is_percent_growth, physical_name
+FROM tempdb.sys.database_files;
+```
+
+## Related guides
+
+- [DBA Production Handbook](/handbook/sql-server-dba-production-handbook)
+- [Always On / HADR checklist](/handbook/sql-server-hadr-checklist)
+- [2016 → 2022 migration checklist](/handbook/sql-server-2016-to-2022-migration-checklist)

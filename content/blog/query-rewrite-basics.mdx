@@ -1,0 +1,17 @@
+---
+title: Query rewrites that beat hint stacking
+description: Start by simplifying predicates and joins before sprinkling OPTION clauses.
+summary: A clearer shape usually beats a forced join order on the old mess.
+date: 2026-08-04
+published: true
+category: Query Tuning
+subcategory: Re-write
+---
+
+Dummy guide: rewrite for readability and cardinality first.
+
+Pull non-SARGable expressions off columns, remove redundant joins, and collapse OR trees that
+block index seeks. Only then consider hints or plan forcing.
+
+If the rewrite still needs a hint, you probably still have a stats or indexing problem — treat
+the hint as temporary evidence, not the fix.

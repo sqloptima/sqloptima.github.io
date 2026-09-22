@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sqloptima SQL Server Knowledgebase</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a1f2e;
+      --text: #e1e5ee;
+      --muted: #8892a4;
+      --accent: #3b82f6;
+      --border: #2d3748;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    p { color: var(--muted); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { list-style: none; padding: 0; margin: 24px 0 0; }
+    li {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .label { display: block; font-weight: 600; color: var(--text); }
+    .meta { display: block; margin-top: 4px; font-size: 0.875rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>SQL Server knowledgebase</h1>
+    <p>
+      Interactive checklists and post-migration scripts used by the sqloptima handbook.
+      Prefer the <a href="/handbook">handbook articles</a> for context, then open the tools below.
+    </p>
+    <ul>
+      <li>
+        <a class="label" href="./sql-server-dba-production-handbook.html">DBA Production Handbook</a>
+        <span class="meta">Day-two operations, incidents, HA/DR, backups, tuning</span>
+      </li>
+      <li>
+        <a class="label" href="./sql-server-installation-checklist.html">Installation Checklist</a>
+        <span class="meta">Production install from architecture through validation</span>
+      </li>
+      <li>
+        <a class="label" href="./sql-server-2016-to-2022-migration-checklist.html">2016 → 2022 Migration Checklist</a>
+        <span class="meta">P0–P8 migration gates, dashboard, script library</span>
+      </li>
+      <li>
+        <a class="label" href="./sql-server-post-migration-compat160.html">Compat 160 Post-Migration Playbook</a>
+        <span class="meta">CE/Query Store remediation after restore upgrades</span>
+      </li>
+      <li>
+        <a class="label" href="./sql-server-hadr-checklist.html">HADR / Always On Checklist</a>
+        <span class="meta">AG + WSFC deployment phases</span>
+      </li>
+      <li>
+        <a class="label" href="./sql-2016-2022-post-migration/">Post-migration SQL package</a>
+        <span class="meta">Downloadable .sql scripts and markdown docs</span>
+      </li>
+    </ul>
+  </main>
+</body>
+</html>

@@ -1,0 +1,19 @@
+---
+title: Using IIF for simple conditional expressions
+description: Compact CASE alternatives — and when CASE (or computed columns) is clearer.
+summary: IIF is fine for short true/false expressions; keep complex branching in CASE.
+date: 2026-07-31
+published: true
+category: Query Tuning
+subcategory: Use of IIF
+---
+
+Dummy guide: `IIF(condition, true_value, false_value)` is syntactic sugar over a simple `CASE`.
+
+Reach for `IIF` when you need a one-line flag or display value in a select list. Prefer explicit
+`CASE` when there are more than two branches, nested conditions, or when the expression is part
+of a persisted computed column that teammates must maintain.
+
+Remember `IIF` still evaluates like `CASE` for type precedence — mismatched types will coerce,
+sometimes in surprising ways. Check the output type in the plan or with `SQL_VARIANT_PROPERTY`
+when mixing numerics and strings.

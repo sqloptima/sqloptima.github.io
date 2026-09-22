@@ -1,0 +1,27 @@
+---
+title: Always On is a 22-phase build, not a checkbox
+description: Sequence Always On Availability Groups from domain and WSFC through listener, failover tests, and monitoring handoff.
+summary: Treat AG/WSFC as gated phases — infrastructure first, failover proof last.
+date: 2026-08-03
+published: true
+---
+
+Availability Groups fail more often in the middle of the stack than in the `CREATE AVAILABILITY GROUP` statement: DNS, quorum, endpoints, firewall rules, and restore sequencing.
+
+Work Always On as a phase-gated build. Do not create the listener until secondaries are synchronized and failover has been tested in the change window.
+
+## Order that reduces rework
+
+1. Infrastructure, domain, accounts, DNS, and network
+2. SQL install and Always On enablement
+3. WSFC validate → create → quorum
+4. Endpoints and firewall
+5. Backup/restore to secondaries
+6. AG, join, listener
+7. Failover test, monitoring, documentation
+
+## Start here
+
+- [SQL Server HADR checklist (handbook)](/handbook/sql-server-hadr-checklist)
+- [Interactive AG/WSFC checklist](/knowledgebase/sql-server-hadr-checklist.html)
+- [DBA Production Handbook](/handbook/sql-server-dba-production-handbook)

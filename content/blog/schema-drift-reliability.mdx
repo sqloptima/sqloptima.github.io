@@ -1,0 +1,12 @@
+---
+title: Schema drift is a reliability problem
+description: Why unchecked environment diffs turn into outage postmortems.
+summary: Treat schema compare as a release gate, not a quarterly cleanup chore.
+date: 2026-07-30
+published: true
+---
+
+Most “mysterious” production failures after a deploy are schema drift wearing a costume.
+
+Compare procedures, indexes, and table definitions before cutover. Approve destructive diffs
+explicitly. Keep the interactive Schema Compare tab as the UX reference for what good looks like.

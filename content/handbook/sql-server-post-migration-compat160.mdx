@@ -1,0 +1,72 @@
+---
+title: SQL Server 2016 to 2022 Post-Migration Tweaks
+description: Compat 160 performance playbook with Query Store, CE controls, stats, and instance settings after backup/restore upgrades.
+summary: Fix CL 160 regressions after SQL Server 2016 → 2022 restore migrations.
+date: 2026-08-03
+published: true
+---
+
+Classic pattern: the app is fine at **compatibility 130**, then slows when you flip to **160**. That is usually cardinality estimator / optimizer plan change — not a broken install.
+
+[Open interactive Compat 160 Playbook](/knowledgebase/sql-server-post-migration-compat160.html)
+
+SQL scripts (downloadable): [`/knowledgebase/sql-2016-2022-post-migration/`](/knowledgebase/sql-2016-2022-post-migration/)
+
+## Fastest safe path
+
+1. Keep production at **130** until Query Store has a golden plan set
+2. Enable Query Store and capture 3–7 days at 130
+3. Flip **UAT** to 160 and find regressions
+4. Apply quick wins: FULLSCAN stats, force last-good plans, scoped CE controls
+5. Align MAXDOP, CTFP (~50), max memory, TempDB
+6. Rewrite CE-sensitive T-SQL; remove temporary bridges
+7. Production cutover with rehearsed rollback to 130
+
+## Enable Query Store first
+
+```sql
+USE [YourDB]; -- change me
+GO
+
+ALTER DATABASE CURRENT SET QUERY_STORE = ON (
+    OPERATION_MODE = READ_WRITE,
+    CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30),
+    DATA_FLUSH_INTERVAL_SECONDS = 900,
+    INTERVAL_LENGTH_MINUTES = 60,
+    MAX_STORAGE_SIZE_MB = 2048,
+    QUERY_CAPTURE_MODE = AUTO,
+    SIZE_BASED_CLEANUP_MODE = AUTO,
+    MAX_PLANS_PER_QUERY = 200
+);
+
+IF CAST(SERVERPROPERTY('ProductMajorVersion') AS int) >= 14
+BEGIN
+    ALTER DATABASE CURRENT SET QUERY_STORE (WAIT_STATS_CAPTURE_MODE = ON);
+END
+```
+
+## Emergency rollback
+
+```sql
+ALTER DATABASE [YourDB] SET COMPATIBILITY_LEVEL = 130;
+-- Optional if you enabled it during triage:
+-- ALTER DATABASE SCOPED CONFIGURATION SET LEGACY_CARDINALITY_ESTIMATION = OFF;
+```
+
+## Script package map
+
+| Folder | Purpose |
+| --- | --- |
+| `01_Diagnostics` | Baselines, waits, plan compare, blocking |
+| `02_Configuration` | Instance/DB settings, TempDB, post-restore options |
+| `03_QueryStore_PlanForce` | Enable QS, find/force regressions |
+| `04_Statistics_Indexes` | Stats quality, missing indexes, post-restore maintenance |
+| `05_Compatibility_CE_Controls` | Legacy CE, hints, IQP toggles, cutover runbook |
+| `06_Code_Rewrite_Patterns` | Before/after T-SQL patterns |
+| `07_Monitoring_Baseline` | Before/after metrics and post-cutover health |
+
+## Related guides
+
+- [2016 → 2022 migration checklist](/handbook/sql-server-2016-to-2022-migration-checklist)
+- [SQL Server installation checklist](/handbook/sql-server-installation-checklist)
+- [DBA Production Handbook](/handbook/sql-server-dba-production-handbook)

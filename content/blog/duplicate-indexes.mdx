@@ -1,0 +1,18 @@
+---
+title: Spotting duplicate and near-duplicate indexes
+description: Same key columns, overlapping includes, and the write cost of keeping both.
+summary: Drop the redundant cover once you prove the survivor serves the same predicates.
+date: 2026-08-07
+published: true
+category: Index
+subcategory: Duplicate index
+---
+
+Dummy guide: exact duplicates are easy; near-duplicates hide in INCLUDE lists.
+
+Compare key column order first, then included columns. If index A is a strict subset of index B
+and both are nonclustered, B usually wins — but verify uniqueness, filtered predicates, and
+compression settings before you drop A.
+
+Document the change in your change ticket so the next incident does not recreate the duplicate
+from an old create script.

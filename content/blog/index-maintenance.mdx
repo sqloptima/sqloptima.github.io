@@ -1,0 +1,18 @@
+---
+title: Index maintenance that fits the maintenance window
+description: Rebuild vs reorganize, online options, and when scheduled jobs do more harm than good.
+summary: Prefer targeted reorganize over nightly rebuild-everything jobs.
+date: 2026-08-09
+published: true
+category: Index
+subcategory: Index maintenance
+---
+
+Dummy guide: index maintenance should follow fragmentation and page density, not a fixed calendar.
+
+Reorganize when fragmentation is moderate and the index is large enough that a full rebuild blows
+the window. Rebuild when the leaf level is badly fragmented *and* you have the I/O budget (or can
+use online rebuilds on Enterprise / Azure SQL tiers that support it).
+
+Always exclude tiny indexes and heaps that never grow — maintenance churn there wastes log and
+tempdb without improving reads.

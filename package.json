@@ -1,0 +1,31 @@
+{
+  "name": "sqloptima-static",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/build-search-index.mjs && next build && node scripts/postbuild.mjs && node scripts/check-output-links.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "audit:static": "node scripts/audit-static-boundary.mjs"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "next": "16.3.4",
+    "next-mdx-remote": "^6.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "typescript": "^5"
+  }
+}

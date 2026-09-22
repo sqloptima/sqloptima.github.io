@@ -1,0 +1,26 @@
+---
+title: How to add images, GIFs, and short videos
+description: Drop media in public/media and embed it from an MDX post.
+summary: Keep tutorials visual without a CMS or Redis.
+date: 2026-09-07
+published: true
+category: Tutorials
+---
+
+Put files in `apps/web/public/media` (images, `.gif`, `.mp4`, `.webm`). Then embed them in any post under `apps/web/content/blog`.
+
+## Image or GIF
+
+```md
+![Setup steps](/media/setup.gif)
+```
+
+## Short video
+
+```mdx
+<video src="/media/walkthrough.mp4" />
+```
+
+Keep clips short. Large installers belong on GitHub Releases or in `public/downloads`, not in git if they are huge.
+
+To list a new app on the site, add a row in `apps/web/constants/apps.ts` with `githubUrl`, `downloadUrl`, and optional `previewSrc`.

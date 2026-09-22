@@ -1,0 +1,18 @@
+---
+title: EXISTS and CROSS APPLY instead of LEFT JOIN for existence checks
+description: Stop joining whole child tables when you only need "any matching row."
+summary: Prefer EXISTS for filters; CROSS APPLY for correlated top-N lookups.
+date: 2026-08-01
+published: true
+category: Query Tuning
+subcategory: EXISTS and CROSS APPLY
+---
+
+Dummy guide: `LEFT JOIN ... WHERE child.id IS NOT NULL` is usually an existence check in disguise.
+
+Rewrite to `EXISTS` so the engine can short-circuit after the first match. Use `CROSS APPLY`
+(or `OUTER APPLY`) when you need columns from the "top 1 related row" without exploding the
+parent into many child rows.
+
+Keep true left joins when you must project nullable child columns for every parent — that is a
+different problem than filtering parents that have children.

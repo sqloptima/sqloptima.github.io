@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function NotFound(){return <main className="wrap section"><p className="eyebrow">404</p><h1>Page not found</h1><p className="lede">That resource is not part of this static educational edition.</p><div className="actions"><Link className="button" href="/">Return home</Link><Link className="button secondary" href="/search/">Search guides</Link></div></main>}
