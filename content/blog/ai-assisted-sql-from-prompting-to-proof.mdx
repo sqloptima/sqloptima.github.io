@@ -1,0 +1,176 @@
+---
+title: AI-Assisted SQL Development — From Prompting to Proof
+description: A practical guide to using Copilot and AI coding agents for SQL Server without surrendering correctness, security, or performance validation.
+summary: Choose the right AI surface, write evidence-rich prompts, constrain agent behavior, and prove every SQL rewrite with plans, metrics, and result checks.
+date: 2026-09-23
+published: true
+category: AI and SQL
+---
+
+AI can explain a stored procedure, propose a rewrite, inspect schema context, and help organize a tuning investigation. It can also invent objects, miss a `NULL` edge case, change duplicate semantics, or confidently claim a performance gain it never measured.
+
+The useful operating principle is simple:
+
+> **AI proposes. SQL Server measures. The engineer decides.**
+
+This guide turns that principle into a repeatable workflow for SQL Server development and query tuning. It uses disposable environments and synthetic data. Never put production credentials, secrets, uncontrolled personal data, or confidential result sets into a prompt.
+
+## Download the workshop SQL
+
+The original learning portal packed all of its supporting material into one large HTML document. This blog version keeps the practical SQL as separate downloads:
+
+- <DownloadLink href="/downloads/ai-sql-copilot/00-workshop-setup.sql">Download Lab 00 — workshop database setup</DownloadLink>
+- <DownloadLink href="/downloads/ai-sql-copilot/01-participant-exercises.sql">Download Lab 01 — participant exercises</DownloadLink>
+- <DownloadLink href="/downloads/ai-sql-copilot/02-facilitator-solutions.sql">Download Lab 02 — facilitator solutions</DownloadLink>
+
+Run these only on a **local, disposable SQL Server instance**. Lab 00 creates or resets the dedicated `AI_SQL_Workshop` database and loads synthetic training data. Read every statement before execution.
+
+## Start with the least autonomous tool
+
+Use the simplest interaction that fits the task:
+
+| Need | Start with | Why |
+| --- | --- | --- |
+| Explain a query or stored procedure | Ask with connected schema context | Produces one reviewable answer |
+| Modify selected SQL | Edit | Keeps changes visible and bounded |
+| Design a migration or multi-step change | Plan | Lets you review the approach first |
+| Inspect metadata and iterate with tools | Agent | Supports a bounded, multi-step workflow |
+| Complete syntax while typing | Inline completion | Fast, but usually less context-aware |
+
+Autonomy increases from Ask to Edit, Plan, and Agent. So do context consumption, tool calls, and operational risk. Approval prompts confirm intent; they do not replace SQL Server permissions.
+
+## Write prompts as evidence contracts
+
+A useful SQL prompt includes eight parts. The mnemonic **EVIDENCE** keeps them easy to remember:
+
+| Part | Include |
+| --- | --- |
+| **E — Environment** | SQL Server version, compatibility level, workload type, and scale |
+| **V — Verifiable objective** | Exact results, fewer reads, lower CPU, or another measurable outcome |
+| **I — Inputs** | Query, compact DDL, representative parameters, actual plan observations, and IO/time |
+| **D — Do-not-change** | No new indexes, hints, `NOLOCK`, schema changes, or other boundaries |
+| **E — Expected output** | Ranked diagnosis, assumptions, alternatives, risks, and validation steps |
+| **N — Negative cases** | `NULL`, duplicates, empty sets, date boundaries, skew, and concurrency |
+| **C — Checks** | Compilation, result equivalence, plan shape, reads, CPU, duration, and spills |
+| **E — Exit condition** | A precise definition of done and a stop point |
+
+A strong request asks for a ranked diagnosis and the evidence that could disprove it before asking for a rewrite.
+
+```text
+Environment: T-SQL, SQL Server 2022, compatibility level 160, OLTP.
+Objective: Reduce logical reads and CPU while preserving exact results.
+Inputs: Query and compact DDL; representative parameters; actual-plan
+estimate error; STATISTICS IO and TIME output.
+Constraints: No new indexes, schema changes, NOLOCK, isolation changes,
+or invented performance percentages.
+Negative cases: NULLs, duplicates, empty results, date boundaries,
+parameter skew, and concurrency.
+Output: Ranked diagnosis with evidence, assumptions, two alternatives
+and their risks, plus a validation procedure.
+Exit: Stop after the recommendations and test plan. Do not execute.
+```
+
+## Give the model less—but better—context
+
+The cheapest prompt is not necessarily the shortest. Missing context causes exploration, extra tool calls, retries, and long speculative answers.
+
+1. Keep one problem per conversation.
+2. Attach only the relevant query, objects, and schema.
+3. Prefer compact DDL and synthetic rows over data dumps.
+4. Lead with actual-plan observations and `STATISTICS IO/TIME`.
+5. Add full plan XML only when it is needed.
+6. Specify the output format and stopping condition.
+7. Store stable engineering standards in project instructions.
+
+Model names, feature availability, quotas, and billing change. Check current product documentation before training or purchasing rather than copying an old routing chart.
+
+## Constrain the agent loop
+
+Instructions can steer an agent, but they cannot guarantee truth or safety. Use defense in depth:
+
+1. Define the goal, scope, exclusions, invariants, acceptance tests, and stop condition.
+2. Review intended objects, evidence, actions, and risks before implementation.
+3. Restrict generated SQL to objects verified by source or database metadata.
+4. Use a read-only or purpose-built execution identity.
+5. Compile, compare results, inspect plans, and measure independently.
+6. Require human acceptance before shipping.
+
+```text
+Treat the goal, scope, exclusions, invariants, and acceptance tests as an
+immutable contract. Before each action, state which acceptance criterion
+it supports. Use retrieved evidence; do not invent missing facts. Label
+facts, inferences, and unknowns. Stop when evidence is missing, scope must
+change, instructions conflict, or validation fails. Do not add unrelated
+features, dependencies, refactors, or cleanup.
+```
+
+## Use a no-new-index tuning loop
+
+“No new index” is a useful workshop constraint because it forces attention onto query shape, estimates, and semantics. It is not a universal production rule; measured evidence may show that an index or design change is the right answer.
+
+1. Capture a baseline.
+2. Diagnose the dominant source of work.
+3. Challenge assumptions and common tuning myths.
+4. Produce a minimal rewrite.
+5. Prove result equivalence.
+6. Benchmark representative executions.
+7. Decide using correctness and operational evidence.
+
+High-value investigations include half-open date predicates, implicit conversions, NULL-safe anti-joins, unnecessary `DISTINCT` or wide projections, repeated scalar work, stale statistics, skew, Query Store history, parameter sensitivity, and compilation trade-offs.
+
+```sql
+-- Function on the column
+WHERE CONVERT(date, OrderDate) = '20260115';
+
+-- Half-open range
+WHERE OrderDate >= CONVERT(datetime2(0), '20260115', 112)
+  AND OrderDate <  CONVERT(datetime2(0), '20260116', 112);
+```
+
+The rewrite is more searchable, but that does not guarantee a seek or a speedup. Verify selectivity, plan shape, logical reads, CPU, and duration.
+
+## Recognize common AI failure modes
+
+| Failure | Why it happens | Repair |
+| --- | --- | --- |
+| Invented schema | No verified metadata | Retrieve schema and restrict output to verified objects |
+| Wrong dialect or version | Training examples are mixed | Pin T-SQL, version, and compatibility level; then compile |
+| Changed semantics | `NULL`, duplicate, or boundary assumptions | Add edge tests and compare results in both directions |
+| Invented speedup | The model has no benchmark | Reject percentages and capture before/after evidence |
+| Unsafe hints or `NOLOCK` | Pattern matching without operational context | Require a specific problem, side effects, evidence, and rollback |
+| Production blindness | No workload history or telemetry | Provide frequency, concurrency, waits, Query Store, and skew |
+| Agent overreach | Broad goals and excessive permission | Narrow scope, use least privilege, review actions, and stop explicitly |
+| Sensitive-data leakage | Context was copied indiscriminately | Use compact DDL, synthetic data, and content exclusions |
+
+SQL text alone cannot prove that blocking, storage latency, memory pressure, application processing, network delay, or an ambiguous business rule is the root cause. Those require evidence outside the query.
+
+## Validate before AI-generated SQL ships
+
+### Correctness
+
+- Compile against the intended SQL Server version and compatibility level.
+- Confirm that every referenced object and column exists.
+- Test `NULL`, duplicates, empty results, and boundary values.
+- Compare original and rewrite results in both directions.
+- If duplicate multiplicity matters, group by all result columns and compare `COUNT_BIG(*)`; `EXCEPT` alone uses set semantics.
+
+### Performance and operations
+
+- Capture actual execution plans and `STATISTICS IO/TIME`.
+- Test representative selective, broad, skewed, and empty parameter values.
+- Review estimates, memory grants, spills, warnings, compilation, and plan reuse.
+- Consider blocking, isolation, logging, tempdb, and concurrency.
+- Re-test under production-like data volume and distribution.
+- Record rollback criteria and keep the change reversible.
+
+## Suggested workshop path
+
+1. Read this guide and choose the right interaction surface.
+2. Download and review all three lab files.
+3. Run Lab 00 on a disposable SQL Server.
+4. Complete Lab 01 before opening the facilitator solutions.
+5. Capture your own plans and IO/time measurements.
+6. Use Lab 02 to compare reasoning, not merely final syntax.
+7. Repeat the validation checklist until it becomes routine.
+
+The goal is not to make AI the final authority. It is to use AI as a fast collaborator inside an evidence-driven engineering process.
