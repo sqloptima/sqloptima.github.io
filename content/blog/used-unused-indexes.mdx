@@ -20,8 +20,6 @@ look low — write amplification is the trade-off you are optimizing, not a vani
 
 The central principle is that usage counters are clues, not a verdict, because they reset and do not capture every business cycle. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
 
-Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
-
 ## Evidence to collect
 
 Use evidence from the same time window whenever possible:
@@ -31,20 +29,12 @@ Use evidence from the same time window whenever possible:
 - plans, constraints, and uniqueness
 - index size and maintenance cost
 
-Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
-
-Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
-
 ## A practical workflow
 
 1. Capture usage across a full business cycle.
 2. Identify dependencies and rare critical jobs.
 3. Group overlapping candidates.
 4. Disable or remove cautiously with rollback and monitoring.
-
-Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
-
-For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
 
 ## Common mistakes
 
@@ -54,59 +44,9 @@ Avoid these shortcuts:
 - ignoring unique constraints
 - treating zero seeks as zero value
 
-These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
-
 ## Verification and completion
 
 Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Finding used and unused indexes before you drop anything**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
-
-The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
-
-## Why index usage deserves a method
-
-The central principle is that usage counters are clues, not a verdict, because they reset and do not capture every business cycle. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
-
-Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
-
-## Evidence to collect
-
-Use evidence from the same time window whenever possible:
-
-- last restart and observation window
-- seeks, scans, lookups, and updates
-- plans, constraints, and uniqueness
-- index size and maintenance cost
-
-Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
-
-Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
-
-## A practical workflow
-
-1. Capture usage across a full business cycle.
-2. Identify dependencies and rare critical jobs.
-3. Group overlapping candidates.
-4. Disable or remove cautiously with rollback and monitoring.
-
-Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
-
-For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
-
-## Common mistakes
-
-Avoid these shortcuts:
-
-- dropping after a short observation
-- ignoring unique constraints
-- treating zero seeks as zero value
-
-These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
-
-## Verification and completion
-
-Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Finding used and unused indexes before you drop anything**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
-
-The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
 
 ## Download and run the diagnostic
 
@@ -134,8 +74,6 @@ Reports collection-window age, active indexes, read and write activity, size, te
 <summary>How to read the output</summary>
 
 Check the SQL Server start time before interpreting zero reads. Compare Total_Reads with update activity and size. Preserve primary keys and unique constraints, and observe a full business cycle before considering a candidate unused.
-
-Do not make a production change from one row alone. Correlate the result with workload timing, Query Store or execution plans, Windows and storage evidence, application telemetry, and recent deployments. Capture a second sample after remediation to prove that the intended metric changed without creating a regression elsewhere.
 
 </details>
 

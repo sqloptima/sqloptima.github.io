@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">SQL Server ransomware defense-in-depth architecture</title>
+  <desc id="desc">A trusted application connects through identity and network controls to a protected SQL Server. Data is encrypted and audited, while verified encrypted backups flow across a separate trust boundary to isolated recovery storage.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06192d"/><stop offset="1" stop-color="#123c65"/></linearGradient>
+    <linearGradient id="safe" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#34d399"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#67e8f9"/></marker>
+    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="#fff" stroke-opacity=".04"/></pattern>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/><rect width="1200" height="675" fill="url(#grid)"/>
+  <text x="60" y="62" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">SQL Server security is a system of independent layers</text>
+  <text x="60" y="91" fill="#a9c3dc" font-family="Segoe UI,Arial,sans-serif" font-size="16">Prevent entry • limit access • protect data • detect misuse • preserve recovery</text>
+
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <rect x="60" y="135" width="205" height="128" rx="18" fill="#0b2947" stroke="#67e8f9" stroke-width="2"/>
+    <path d="M145 173h36v30c0 27-18 41-36 48-18-7-36-21-36-48v-30Z" fill="#0ea5e9" opacity=".28" stroke="#67e8f9" stroke-width="2"/><path d="m130 203 11 11 21-24" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="162" y="229" fill="#fff" font-size="19" font-weight="700" text-anchor="middle">Trusted application</text>
+    <text x="162" y="250" fill="#a9c3dc" font-size="13" text-anchor="middle">validated client + parameters</text>
+
+    <rect x="325" y="125" width="550" height="314" rx="24" fill="#071f37" stroke="#4f7ca5" stroke-width="2"/>
+    <text x="600" y="160" fill="#fff" font-size="24" font-weight="700" text-anchor="middle">Protected SQL Server boundary</text>
+    <g fill="#0d3152" stroke="#38bdf8" stroke-width="1.5">
+      <rect x="355" y="188" width="230" height="88" rx="14"/><rect x="615" y="188" width="230" height="88" rx="14"/>
+      <rect x="355" y="306" width="230" height="88" rx="14"/><rect x="615" y="306" width="230" height="88" rx="14"/>
+    </g>
+    <g fill="#fff" font-size="17" font-weight="700" text-anchor="middle"><text x="470" y="224">Identity &amp; least privilege</text><text x="730" y="224">Encrypted TDS channel</text><text x="470" y="342">TDE • RLS • Always Encrypted</text><text x="730" y="342">Audit • alerts • evidence</text></g>
+    <g fill="#9fc1de" font-size="13" text-anchor="middle"><text x="470" y="249">AD groups • MFA • service identity</text><text x="730" y="249">certificate validation • segmentation</text><text x="470" y="367">files • rows • sensitive columns</text><text x="730" y="367">tamper-resistant destinations</text></g>
+    <path d="M265 199H325" stroke="#67e8f9" stroke-width="4" marker-end="url(#arrow)" filter="url(#glow)"/>
+
+    <path d="M600 439v62" stroke="#67e8f9" stroke-width="4" marker-end="url(#arrow)" filter="url(#glow)"/>
+    <rect x="325" y="502" width="550" height="120" rx="22" fill="#092e3e" stroke="#34d399" stroke-width="2"/>
+    <text x="600" y="536" fill="#d1fae5" font-size="14" font-weight="700" text-anchor="middle" letter-spacing="2">SEPARATE RECOVERY TRUST BOUNDARY</text>
+    <g transform="translate(370 552)" fill="none" stroke="#6ee7b7" stroke-width="3"><ellipse cx="42" cy="13" rx="35" ry="12"/><path d="M7 13v30c0 7 16 12 35 12s35-5 35-12V13M7 28c0 7 16 12 35 12s35-5 35-12"/></g>
+    <text x="505" y="575" fill="#fff" font-size="19" font-weight="700">Verified encrypted backup chain</text>
+    <text x="505" y="598" fill="#a7d8cb" font-size="13">CHECKSUM • VERIFYONLY • SHA-256 • tested restore</text>
+    <path d="M750 554h57v42h-57Z" fill="#34d399" opacity=".25" stroke="#6ee7b7" stroke-width="2"/><path d="M764 554v-12a15 15 0 0 1 30 0v12" fill="none" stroke="#6ee7b7" stroke-width="3"/>
+    <text x="828" y="575" fill="#fff" font-size="16" font-weight="700">Isolated / immutable copy</text>
+    <text x="828" y="597" fill="#a7d8cb" font-size="12">separate credentials + retention controls</text>
+  </g>
+  <g transform="translate(1013 154)" font-family="Segoe UI,Arial,sans-serif"><path d="M30 0 60 14v25c0 29-19 46-30 51C19 85 0 68 0 39V14Z" fill="#f97316"/><path d="m17 31 26 26M43 31 17 57" stroke="#fff" stroke-width="5" stroke-linecap="round"/><text x="30" y="117" fill="#fed7aa" font-size="14" font-weight="700" text-anchor="middle">Ransomware</text><text x="30" y="136" fill="#a9c3dc" font-size="12" text-anchor="middle">assume breach</text></g>
+  <path d="M1002 238c-62 8-82 38-117 65" fill="none" stroke="#fb923c" stroke-width="3" stroke-dasharray="8 8" marker-end="url(#arrow)"/>
+</svg>

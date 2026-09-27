@@ -11,7 +11,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const area = getPracticeArea((await params).slug);
   if (!area) return {};
-  return { title: area.title, description: area.summary };
+  return { title: area.title, description: area.summary, alternates: { canonical: `/practice/${area.slug}/` }, openGraph: { title: `${area.title} | SQL Optima`, description: area.summary, images: [{ url: area.image, alt: `${area.title} database practice` }] } };
 }
 
 export default async function PracticePage({ params }: { params: Promise<{ slug: string }> }) {

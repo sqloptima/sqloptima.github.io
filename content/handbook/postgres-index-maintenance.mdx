@@ -1,20 +1,197 @@
 ---
 title: PostgreSQL Index Maintenance
-description: Keep PostgreSQL indexes healthy without reckless rebuilds.
-summary: Bloat signals, REINDEX strategy, and how to keep planners honest.
-date: 2026-07-18
+description: Measure index health, distinguish bloat from low usage, and rebuild only when the evidence supports it.
+summary: A PostgreSQL 18 guide to index usage, bloat, integrity checks, and safe concurrent reindexing.
+date: 2026-09-27
 published: true
 ---
 
-Watch for unused indexes, bloat estimates, and planner regressions after large deletes.
+Index maintenance in PostgreSQL should begin with evidence, not a calendar. Autovacuum removes dead index entries and B-tree pages that become completely empty can be reused, but partially empty pages may remain allocated. Some workloads therefore benefit from targeted reindexing; that does not justify rebuilding every index each weekend.
 
-Prefer targeted `REINDEX CONCURRENTLY` on hot paths; avoid weekend-wide rebuild rituals.
+This guide builds on the Postgres.FM episode [Index maintenance | Postgres.FM 012](https://www.youtube.com/watch?v=0Vb-kfTIHj0), featuring Nikolay Samokhvalov and Michael Christofides. Version-sensitive details have been updated against the PostgreSQL 18.6 documentation. PostgreSQL 18 is the current stable major release as of September 27, 2026.
 
-Pair index work with vacuum discipline and realistic statistics targets.
+## What index bloat changes
+
+An oversized index can affect more than storage:
+
+- A query may read more index pages to return the same rows.
+- Larger indexes compete for shared buffers and the operating-system page cache.
+- Index updates generate more I/O and WAL, affecting replication, backups, and checkpoints.
+- Maintenance operations take longer and require more temporary capacity.
+
+Bloat is only one possible explanation for a large index or a slower plan. Data growth, changed value distribution, stale statistics, a different plan, cache pressure, and storage latency can produce similar symptoms. Establish which of those changed before scheduling a rebuild.
+
+## Build an inventory first
+
+Start with size and cumulative usage statistics:
 
 ```sql
-SELECT schemaname, relname, idx_scan, idx_tup_read
-FROM pg_stat_user_indexes
-ORDER BY idx_scan ASC
-LIMIT 20;
+SELECT
+    s.schemaname,
+    s.relname AS table_name,
+    s.indexrelname AS index_name,
+    pg_size_pretty(pg_relation_size(s.indexrelid)) AS index_size,
+    s.idx_scan,
+    s.idx_tup_read,
+    s.idx_tup_fetch
+FROM pg_stat_user_indexes AS s
+ORDER BY pg_relation_size(s.indexrelid) DESC;
 ```
+
+Interpret `idx_scan` within its statistics window. Check when database statistics were reset before calling an index unused:
+
+```sql
+SELECT datname, stats_reset
+FROM pg_stat_database
+WHERE datname = current_database();
+```
+
+An index with no recent scans may still support a monthly report, a rare incident query, a foreign-key access path, or a standby workload not represented by the primary's counters. Confirm query plans and a complete business cycle before dropping it.
+
+## Estimate bloat, then confirm the expensive cases
+
+Catalog-only bloat queries are estimates. Alignment, fillfactor, workload shape, and index access method can make a healthy index look wasteful. Label estimated values as estimates and use them to rank candidates rather than as proof.
+
+The supported `pgstattuple` extension offers closer inspection:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
+
+SELECT *
+FROM pgstatindex('public.orders_created_at_idx');
+```
+
+`pgstatindex` applies to B-tree indexes and reads the entire index, so it can be expensive on a busy or very large system. Run it with an appropriate role, statement timeout, and workload window. `pgstattuple_approx` provides a faster approximate view for tables, not a universal index-bloat answer.
+
+For a disputed high-value case, test on a production-like clone: record the index size, rebuild it, and compare the result. A clone avoids imposing a full scan or blocking maintenance experiment on production, but it must preserve representative data distribution and PostgreSQL settings.
+
+## Find the cause before rebuilding
+
+Common contributors include:
+
+- High update or delete churn that leaves sparsely populated B-tree pages.
+- Long-running transactions or replication slots that delay removal of dead tuples.
+- Poorly tuned autovacuum on a table whose change rate exceeds the defaults.
+- Random insert patterns and page splits.
+- A fillfactor that does not match the write pattern.
+- Redundant indexes that duplicate write and cache costs.
+
+Inspect table vacuum history beside the index evidence:
+
+```sql
+SELECT
+    schemaname,
+    relname,
+    n_live_tup,
+    n_dead_tup,
+    last_autovacuum,
+    autovacuum_count,
+    last_autoanalyze,
+    autoanalyze_count
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC;
+```
+
+Reindexing without correcting blocked or undersized autovacuum may produce only temporary relief.
+
+## Choose the least disruptive remedy
+
+### Keep and tune
+
+If the index supports an important query and its physical condition is reasonable, leave it alone. Tune table-level autovacuum thresholds for high-churn relations when the evidence shows cleanup cannot keep pace. Consider fillfactor changes only after measuring page splits and update behavior; a new setting takes full effect after rebuilding the index.
+
+### Drop a redundant or unused index
+
+Compare definitions, predicates, included columns, operator classes, constraints, and actual plans. A B-tree on `(a, b)` can sometimes serve queries on `a`, but that does not automatically make every index on `a` redundant. PostgreSQL 18's skip-scan support also makes some multicolumn B-tree indexes usable when earlier columns lack equality restrictions, so re-test candidate indexes after upgrading rather than applying an old redundancy rule blindly.
+
+When production write availability matters, `DROP INDEX CONCURRENTLY` reduces blocking, but it has restrictions and cannot run inside a transaction block. Preserve the definition and rollback procedure before removal.
+
+### Rebuild a proven candidate
+
+A standard rebuild is straightforward but blocks writes to the table:
+
+```sql
+REINDEX INDEX public.orders_created_at_idx;
+```
+
+For a live production table, PostgreSQL supports a lower-locking alternative:
+
+```sql
+REINDEX INDEX CONCURRENTLY public.orders_created_at_idx;
+```
+
+`REINDEX CONCURRENTLY` does more work, performs multiple scans, waits for transactions that could use the index, and adds CPU and I/O load. It cannot run inside a transaction block. Only one concurrent index build can run on a table at a time, and exclusion-constraint indexes cannot be rebuilt concurrently.
+
+Monitor progress:
+
+```sql
+SELECT
+    pid,
+    datname,
+    relid::regclass AS table_name,
+    index_relid::regclass AS index_name,
+    command,
+    phase,
+    blocks_done,
+    blocks_total
+FROM pg_stat_progress_create_index;
+```
+
+If a concurrent rebuild fails, inspect `pg_index.indisvalid` and the `_ccnew` or `_ccold` indexes it may leave behind. Do not rerun maintenance blindly: PostgreSQL documents different cleanup for the transient new index and the old index.
+
+## Verify integrity separately from bloat
+
+The `amcheck` extension checks structural consistency; it does not estimate bloat. For B-tree indexes:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS amcheck;
+
+SELECT bt_index_check('public.orders_created_at_idx'::regclass);
+```
+
+Use `bt_index_parent_check` only after reviewing its stronger locks and cost. The `pg_amcheck` command-line utility can check multiple databases and run checks in parallel. PostgreSQL 18's `pg_amcheck` supports ordinary and TOAST tables, materialized views, sequences, and B-tree indexes; unsupported relation types are skipped.
+
+Collation-library changes can alter text ordering rules. After an operating-system or collation upgrade, inspect collation version mismatches and follow the platform and PostgreSQL upgrade guidance before refreshing the collation version or rebuilding affected indexes.
+
+## What PostgreSQL 18 changes
+
+PostgreSQL 18 does not remove the need to measure index health, but several changes affect maintenance and design decisions:
+
+- **B-tree skip scans:** multicolumn B-tree indexes can serve more queries when useful conditions apply to later columns. Revalidate apparently redundant indexes and query plans after upgrade.
+- **Parallel GIN builds:** PostgreSQL 18 can use parallel workers when building GIN indexes. Budget `maintenance_work_mem`, workers, CPU, and I/O rather than assuming the faster build is free.
+- **Faster sorted builds:** range-type GiST and B-tree index builds can sort input to improve build speed.
+- **Asynchronous I/O:** the new AIO subsystem can improve vacuum and scan throughput. Establish a fresh baseline after upgrading; old maintenance-duration expectations may no longer apply.
+- **More visible plan I/O:** `EXPLAIN ANALYZE` now reports buffer access automatically, making it easier to compare page work before and after an index change.
+- **Retained optimizer statistics during `pg_upgrade`:** PostgreSQL 18 preserves statistics, reducing the period of unstable plans after a major upgrade. Continue to verify critical plans rather than assuming every estimate remains ideal.
+
+These features may change which indexes help and how long maintenance takes, but they do not turn a bloat estimate into a rebuild order.
+
+## A production maintenance workflow
+
+1. Record the PostgreSQL minor version, statistics reset time, workload window, and index definition.
+2. Rank indexes by size, workload importance, write cost, and estimated waste.
+3. Confirm the leading candidates with plans, buffer usage, vacuum history, and a physical inspection where justified.
+4. Check long transactions, replication slots, free disk space, WAL capacity, replica lag limits, and backup overlap.
+5. Choose drop, autovacuum tuning, fillfactor change, or targeted reindexing based on the cause.
+6. Rebuild one index at a time during a measured window; monitor progress and system load.
+7. Verify validity, size, query plans, latency, buffers, WAL volume, and replica lag.
+8. Retain the before-and-after record so the next cycle is based on observed growth rather than a generic threshold.
+
+## Avoid these shortcuts
+
+- Reindexing every index on a fixed schedule without evidence.
+- Treating an estimated bloat percentage as an exact measurement.
+- Dropping an index from `idx_scan = 0` without checking the statistics window and rare workloads.
+- Running `REINDEX CONCURRENTLY` without capacity for its extra scans, WAL, and temporary index.
+- Assuming `CONCURRENTLY` means no locks or no production impact.
+- Using B-tree inspection conclusions for GIN, GiST, BRIN, or hash indexes.
+- Declaring success from reclaimed disk alone without retesting the queries that justified the change.
+
+## References
+
+- [Index maintenance | Postgres.FM 012](https://www.youtube.com/watch?v=0Vb-kfTIHj0) — Nikolay Samokhvalov and Michael Christofides
+- [PostgreSQL 18 release notes](https://www.postgresql.org/docs/18/release-18.html)
+- [Routine reindexing](https://www.postgresql.org/docs/18/routine-reindex.html)
+- [`REINDEX`](https://www.postgresql.org/docs/18/sql-reindex.html)
+- [`pgstattuple`](https://www.postgresql.org/docs/18/pgstattuple.html)
+- [`amcheck`](https://www.postgresql.org/docs/18/amcheck.html) and [`pg_amcheck`](https://www.postgresql.org/docs/18/app-pgamcheck.html)

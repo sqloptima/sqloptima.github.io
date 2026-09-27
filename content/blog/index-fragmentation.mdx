@@ -21,8 +21,6 @@ are the moments fragmentation usually becomes real.
 
 The central principle is that fragmentation is only one input to maintenance and often matters less than page count, workload, and storage. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
 
-Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
-
 ## Evidence to collect
 
 Use evidence from the same time window whenever possible:
@@ -32,20 +30,12 @@ Use evidence from the same time window whenever possible:
 - page density and growth pattern
 - maintenance duration and log impact
 
-Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
-
-Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
-
 ## A practical workflow
 
 1. Find indexes large enough to matter.
 2. Correlate fragmentation with workload evidence.
 3. Choose reorganize, rebuild, or no action.
 4. Measure the operational effect after maintenance.
-
-Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
-
-For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
 
 ## Common mistakes
 
@@ -55,59 +45,9 @@ Avoid these shortcuts:
 - using a single percentage threshold
 - ignoring log, replica, and maintenance-window impact
 
-These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
-
 ## Verification and completion
 
 Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Reading index fragmentation without chasing ghosts**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
-
-The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
-
-## Why fragmentation decisions deserves a method
-
-The central principle is that fragmentation is only one input to maintenance and often matters less than page count, workload, and storage. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
-
-Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
-
-## Evidence to collect
-
-Use evidence from the same time window whenever possible:
-
-- page count and index depth
-- scan frequency and read-ahead
-- page density and growth pattern
-- maintenance duration and log impact
-
-Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
-
-Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
-
-## A practical workflow
-
-1. Find indexes large enough to matter.
-2. Correlate fragmentation with workload evidence.
-3. Choose reorganize, rebuild, or no action.
-4. Measure the operational effect after maintenance.
-
-Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
-
-For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
-
-## Common mistakes
-
-Avoid these shortcuts:
-
-- rebuilding every index nightly
-- using a single percentage threshold
-- ignoring log, replica, and maintenance-window impact
-
-These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
-
-## Verification and completion
-
-Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Reading index fragmentation without chasing ghosts**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
-
-The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
 
 ## Download and run the diagnostic
 
@@ -135,8 +75,6 @@ Collects physical statistics, page counts, fragmentation, page density, forwardi
 <summary>How to read the output</summary>
 
 PageCount provides scale. High fragmentation on a tiny index rarely matters. Review AvgPageSpaceUsed or equivalent density indicators with scan behavior. For heaps, forwarding records can signal update-driven movement and may justify a clustered design review.
-
-Do not make a production change from one row alone. Correlate the result with workload timing, Query Store or execution plans, Windows and storage evidence, application telemetry, and recent deployments. Capture a second sample after remediation to prove that the intended metric changed without creating a regression elsewhere.
 
 </details>
 

@@ -1,0 +1,163 @@
+---
+title: 'SQL Server security after ransomware: protect, contain, recover'
+description: 'What Nepal’s 2026 market outage teaches about defense in depth, encrypted SQL Server data, and recoverable backup chains.'
+summary: 'Turn SQL Server security into layers: identity, network, encryption, audit, verified backups, and isolated recovery.'
+date: 2026-09-27
+published: true
+category: Security & recovery
+subcategory: SQL Server
+---
+On 21 September 2026, regular trading at the Nepal Stock Exchange stopped for a full day. What was first described as a technical problem was later reported as a ransomware attack against Data Hub Pvt Ltd, the data-centre provider supporting the trading environment. The servers and trading management systems of 72 brokers were disrupted.
+
+The recovery is the important part of the story. According to [OnlineKhabar’s account of the incident](https://english.onlinekhabar.com/nepses-ransomware-attack-explainer.html), systems were formatted and restored from backup data held at a disaster-recovery site in Butwal. Trading resumed the next day, and the provider reported no data loss. At the time of that report, whether attackers had also copied data remained under investigation.
+
+That distinction matters. A backup can restore availability after files are encrypted or destroyed. It cannot undo a confidentiality breach if an attacker has already exfiltrated readable data.
+
+## Why do we need to secure the data?
+
+A production database carries more than rows. It carries customer trust, operational continuity, financial history, credentials, and evidence that an organisation may be legally required to protect. Ransomware targets all three properties that security teams must preserve:
+
+- **Confidentiality:** unauthorised people must not read sensitive data.
+- **Integrity:** unauthorised changes must be detectable and recoverable.
+- **Availability:** authorised users must regain dependable access within the agreed recovery time.
+
+Modern ransomware can combine encryption with data theft. This “double extortion” means a healthy backup is necessary but not sufficient. The database needs controls that reduce the chance of entry, limit what a compromised identity can reach, make stolen files difficult to read, surface suspicious activity, and preserve a clean path back to service.
+
+## How can we secure SQL Server?
+
+Microsoft recommends a layered, defense-in-depth model rather than a single feature. The architecture above maps prevention, containment, detection, and recovery to independent controls; each layer answers a different failure mode. Use this coverage map to find the control that matches the exposure—not simply the feature with the strongest-sounding name.
+
+<div className="security-table security-coverage-table">
+
+| Data state or risk | Primary SQL Server controls | Supporting platform controls | What success looks like |
+| --- | --- | --- | --- |
+| **At rest** | <Acronym title="Transparent Data Encryption">TDE</Acronym>, backup encryption, cell-level encryption | Key vault or <Acronym title="Hardware Security Module">HSM</Acronym>, disk encryption, immutable storage | Stolen files and backup media are unreadable without separately protected keys |
+| **In transit** | <Acronym title="Transport Layer Security">TLS</Acronym>, certificate validation, <Acronym title="Tabular Data Stream">TDS</Acronym> 8.0 strict encryption | Network segmentation, private routing, firewalls | Clients reject untrusted endpoints and every database session is encrypted |
+| **In use** | Always Encrypted, secure enclaves | Trusted client, attestation, protected key store | Sensitive values remain encrypted outside an authorised client or attested enclave |
+| **Access scope** | Roles, `GRANT`/`DENY`, <Acronym title="Row-Level Security">RLS</Acronym>, <Acronym title="Dynamic Data Masking">DDM</Acronym> | <Acronym title="Active Directory">AD</Acronym> groups, <Acronym title="Multifactor Authentication">MFA</Acronym>, <Acronym title="Group Managed Service Account">gMSA</Acronym>, privileged-access workflows | Each identity can reach only the data and operations required for its job |
+| **Detection & integrity** | SQL Server Audit, Extended Events, temporal/history patterns | <Acronym title="Security Information and Event Management">SIEM</Acronym>, <Acronym title="Endpoint Detection and Response">EDR</Acronym>, protected log archive, alerting | Privilege and data-access anomalies create durable, actionable evidence |
+| **Recovery** | Full, differential and log backups; `CHECKSUM`; restore validation | Separate credentials, off-site copy, object lock, isolated restore environment | A clean, timed restore meets the agreed <Acronym title="Recovery Point Objective">RPO</Acronym> and <Acronym title="Recovery Time Objective">RTO</Acronym> after production is lost |
+
+</div>
+
+### 1. Harden identity and privileges
+
+Prefer Windows or Active Directory identities over shared SQL logins where possible. Grant access through groups and roles, apply least privilege, require multifactor authentication for machine-level access, and use managed service accounts where appropriate. Separate the ability to administer the operating system, SQL Server, security logs, and backup infrastructure. A compromised application account should not also be able to delete backups.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/security/identity-boundary.svg" alt="Identity flow from a user through MFA and Active Directory groups to a least-privilege SQL Server role" />
+  <figcaption><strong>Identity boundary.</strong> Authenticate centrally, authorise through roles, and keep application, DBA, operating-system, audit, and backup privileges separate.</figcaption>
+</figure>
+
+### 2. Reduce and encrypt the network path
+
+Place SQL Server on a segmented network, expose only required ports, restrict administrative access to managed hosts, and patch the operating system and database engine. Encrypt client connections and validate the server certificate. For SQL Server 2022 and later, Microsoft recommends **Force Strict Encryption** with <Acronym title="Tabular Data Stream">TDS</Acronym> 8.0 rather than the older Force Encryption setting; test client drivers and connection strings before enforcing it.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/security/encrypted-transit.svg" alt="Encrypted SQL Server network path from an application through a segmented firewall using certificate-validated TLS" />
+  <figcaption><strong>Data in transit.</strong> Encryption without certificate validation can still connect a client to the wrong endpoint; require both an encrypted session and a trusted server identity.</figcaption>
+</figure>
+
+### 3. Protect files, rows, and sensitive columns
+
+These controls are complementary, not interchangeable:
+
+<div className="security-table">
+
+| Control | Protects against | Important limit |
+| --- | --- | --- |
+| Transparent Data Encryption (<Acronym title="Transparent Data Encryption">TDE</Acronym>) | Offline theft of database, log, `tempdb`, and <Acronym title="Transparent Data Encryption">TDE</Acronym>-protected backup files | Data is decrypted by the engine for authorised queries; protect and back up the certificate and keys separately |
+| Always Encrypted | Exposure of selected sensitive columns to the Database Engine and high-privilege operators | Requires an enabled client driver and application compatibility work; query operations vary by encryption type |
+| Always Encrypted with secure enclaves | Richer confidential queries and in-place cryptographic operations inside protected memory | Requires enclave configuration, attestation where applicable, supported versions, and threat-model review |
+| Row-Level Security (<Acronym title="Row-Level Security">RLS</Acronym>) | Users seeing rows outside their permitted context | Policy design and `SESSION_CONTEXT` must be tested; privileged access still needs governance |
+| Dynamic Data Masking (<Acronym title="Dynamic Data Masking">DDM</Acronym>) | Accidental exposure in query results to non-privileged users | Masking is not encryption and is not a boundary against privileged users |
+| SQL Server Audit | Evidence of access and security-relevant changes | Audit destinations must be monitored and protected from tampering |
+
+</div>
+
+<figure className="security-section-visual">
+  <img src="/images/blog/security/data-protection-layers.svg" alt="Layered data protection showing TLS in transit, Always Encrypted for sensitive columns, TDE for database files, and encrypted backups" />
+  <figcaption><strong>Choose by data state.</strong> <Acronym title="Transport Layer Security">TLS</Acronym> protects the wire, Always Encrypted protects selected values in use, <Acronym title="Transparent Data Encryption">TDE</Acronym> protects database files at rest, and backup encryption protects portable recovery media.</figcaption>
+</figure>
+
+[Microsoft’s SQL Server security guidance](https://learn.microsoft.com/en-us/sql/relational-databases/security/sql-server-security-best-practices?view=sql-server-ver17) recommends <Acronym title="Transparent Data Encryption">TDE</Acronym> for data at rest, <Acronym title="Row-Level Security">RLS</Acronym> for record-level access, and Always Encrypted over masking when it is feasible. The broader [TrustedTech overview](https://www.trustedtechteam.com/blogs/sql-server/sql-server-security-best-practices) reaches the same operational conclusion: useful protection comes from several barriers working together.
+
+With [Always Encrypted](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-database-engine?view=sql-server-ver17), column master keys stay in a trusted store outside the database system. The client driver encrypts parameters and decrypts results, so the Database Engine does not receive those keys in plaintext. Randomised encryption provides stronger pattern resistance; deterministic encryption supports equality operations but can reveal value patterns. Secure enclaves extend the set of supported operations, but they do not remove the need for careful key management and application testing.
+
+### 4. Make suspicious activity visible
+
+Enable server-level auditing and add targeted database audit specifications for sensitive objects. Forward security and operating-system telemetry to a location the SQL Server host cannot rewrite. Alert on failed logins, privilege changes, disabled security controls, unusual export volume, backup deletion, and unexpected service or agent activity. Retain enough history to reconstruct an intrusion that began days or weeks before encryption became visible.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/security/audit-detection-flow.svg" alt="SQL Server and host security events flowing to protected audit storage, correlation, alerts, and incident response" />
+  <figcaption><strong>Detection path.</strong> Send database, host, identity, and storage signals to a destination the monitored server cannot silently alter.</figcaption>
+</figure>
+
+### 5. Engineer backups for a hostile event
+
+Maintain full, differential, and transaction-log backups that meet explicit recovery point and recovery time objectives. Use `CHECKSUM`, run `RESTORE VERIFYONLY`, calculate a file hash, and—most importantly—perform scheduled restores on an isolated system. Keep at least one copy outside the production security boundary, use separate credentials, limit deletion rights, and prefer immutable or object-locked retention where the selected storage platform supports it.
+
+Encryption and recoverability are separate responsibilities. Use SQL Server backup encryption or <Acronym title="Transparent Data Encryption">TDE</Acronym> as appropriate, keep keys and certificates outside the backup set, and test a complete restore—including keys—before declaring the design recoverable.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/security/ransomware-recovery-flow.svg" alt="Full differential and transaction log backups being verified, hashed, copied to isolated storage, and restored into a clean recovery environment" />
+  <figcaption><strong>Recovery path.</strong> A backup becomes a recovery control only after the complete chain, keys, integrity, timing, and application outcome have been tested away from production.</figcaption>
+</figure>
+
+## How reliable is this approach?
+
+No security control is a guarantee. Reliability comes from independent layers and evidence that they still work.
+
+<div className="security-table security-evidence-table">
+
+| Assurance question | Evidence to require |
+| --- | --- |
+| Can stolen media be read? | Encryption configuration, protected key custody, and a controlled restore test |
+| Can one stolen identity reach everything? | Role review, access-path testing, segmentation, <Acronym title="Multifactor Authentication">MFA</Acronym>, and separate backup credentials |
+| Can we detect misuse? | Protected audit records, alert tests, and an incident-response drill |
+| Can ransomware destroy every recovery copy? | A copy outside the production trust boundary plus tested retention or immutability controls |
+| Can we recover on time? | Timed restore exercises that prove the full chain and application validation |
+
+</div>
+
+`RESTORE VERIFYONLY` checks that a backup set is complete and readable enough for restore processing; it is not a substitute for restoring the database and validating the application. Likewise, encryption protects data only while its keys, certificates, credentials, and plaintext endpoints remain controlled.
+
+## Do we need a new solution for high-assurance security?
+
+Usually, the first need is not another isolated security product. It is a coherent architecture, clear ownership, protected key management, and automated proof that recovery works. Add specialised controls—hardware security modules, privileged-access management, confidential computing, immutable storage, data-loss prevention, or a managed detection service—when the threat model, regulation, or recovery objective justifies them.
+
+A useful design test is independence: if the production domain, SQL administrator account, or backup server is compromised, what still survives? High assurance requires at least one recovery copy and its required keys to remain beyond that blast radius.
+
+## Where SQL Optima Backup Manager helps
+
+[SQL Optima Backup Manager](/products/backup-manager/) supports the recovery layer of this architecture. It centralises SQL Server full, differential, and log backup plans; uses compression, `CHECKSUM`, and optional backup encryption; runs `RESTORE VERIFYONLY`; calculates <Acronym title="Secure Hash Algorithm 256-bit">SHA-256</Acronym> before transfer; and records backup history. Approved files can be retained locally and copied to supported object storage, including MinIO, Amazon S3, Azure Blob Storage, and Google Cloud Storage.
+
+The platform also separates local machine secrets and service controls from remote operations. Its HTTPS web console uses role-based Admin, Operator, and Viewer access. That reduces casual exposure, but secure deployment still matters: restrict the management endpoint to an administrative LAN or VPN, protect storage credentials, configure retention controls at the storage provider, and test restores in an isolated environment.
+
+Backup Manager does **not** claim to prevent ransomware, guarantee that data cannot be breached, or replace <Acronym title="Transparent Data Encryption">TDE</Acronym>, Always Encrypted, endpoint protection, monitoring, and incident response. Its value is narrower and measurable: create a consistent backup chain, verify media before upload, preserve copies across storage targets, and give operators durable evidence for recovery.
+
+## A practical ransomware-readiness checklist
+
+<div className="security-checklist" role="list" aria-label="Ransomware readiness checklist">
+  <div role="listitem"><span aria-hidden="true">01</span><p><strong>Map the data.</strong> Inventory sensitive columns, owners, flows, classifications, recovery objectives, and regulatory obligations.</p></div>
+  <div role="listitem"><span aria-hidden="true">02</span><p><strong>Harden the platform.</strong> Patch and segment the host, reduce exposed services, and restrict administration to managed access paths.</p></div>
+  <div role="listitem"><span aria-hidden="true">03</span><p><strong>Protect the wire.</strong> Enforce encrypted connections with certificate validation; test drivers before requiring <Acronym title="Tabular Data Stream">TDS</Acronym> 8.0 strict encryption.</p></div>
+  <div role="listitem"><span aria-hidden="true">04</span><p><strong>Constrain identities.</strong> Replace shared or excessive privileges with <Acronym title="Active Directory">AD</Acronym> groups, least-privilege roles, managed service identities, and <Acronym title="Multifactor Authentication">MFA</Acronym>-protected administration.</p></div>
+  <div role="listitem"><span aria-hidden="true">05</span><p><strong>Encrypt at rest.</strong> Apply <Acronym title="Transparent Data Encryption">TDE</Acronym> or backup encryption as appropriate, and preserve the certificates and keys required for recovery.</p></div>
+  <div role="listitem"><span aria-hidden="true">06</span><p><strong>Protect high-value fields.</strong> Use Always Encrypted for selected sensitive columns when the application and query patterns support it.</p></div>
+  <div role="listitem"><span aria-hidden="true">07</span><p><strong>Limit data visibility.</strong> Apply <Acronym title="Row-Level Security">RLS</Acronym>, carefully scoped permissions, and masking where they reduce exposure; do not mistake masking for encryption.</p></div>
+  <div role="listitem"><span aria-hidden="true">08</span><p><strong>Preserve evidence.</strong> Enable protected auditing and alerts for privilege, export, backup, authentication, and security-control changes.</p></div>
+  <div role="listitem"><span aria-hidden="true">09</span><p><strong>Separate recovery.</strong> Build encrypted full, differential, and log chains with a copy beyond the production identity and storage boundary.</p></div>
+  <div role="listitem"><span aria-hidden="true">10</span><p><strong>Prove the restore.</strong> Rehearse a timed, isolated restore, validate integrity and critical application journeys, then record actual <Acronym title="Recovery Point Objective">RPO</Acronym> and <Acronym title="Recovery Time Objective">RTO</Acronym>.</p></div>
+  <div role="listitem"><span aria-hidden="true">11</span><p><strong>Exercise the response.</strong> Practise isolation, evidence preservation, rebuild, recovery, credential rotation, notification, and decision ownership.</p></div>
+  <div role="listitem"><span aria-hidden="true">12</span><p><strong>Review continuously.</strong> Reassess the threat model after material system changes, permission reviews, incidents, and recovery drills.</p></div>
+</div>
+
+The lesson from this incident is not simply “take backups.” It is to design for the moment when a trusted environment is no longer trustworthy. Prevent what you can, constrain what gets through, make misuse visible, and maintain a recovery path the attacker cannot easily reach.
+
+## References
+
+- [NEPSE’s “technical glitch” was a ransomware attack: what happened? — OnlineKhabar](https://english.onlinekhabar.com/nepses-ransomware-attack-explainer.html)
+- [SQL Server security best practices — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/sql-server-security-best-practices?view=sql-server-ver17)
+- [Always Encrypted — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-database-engine?view=sql-server-ver17)
+- [SQL Server security best practices — TrustedTech](https://www.trustedtechteam.com/blogs/sql-server/sql-server-security-best-practices)

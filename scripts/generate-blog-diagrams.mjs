@@ -22,7 +22,7 @@ function concepts(slug) {
 }
 
 function diagram(kind, labels, colors) {
-  const [bg, primary, light, accent] = colors;
+  const [, primary, light, accent] = colors;
   if (kind === 0) return `<path d="M225 330H515M685 330H975" stroke="${light}" stroke-width="8" stroke-linecap="round"/><path d="m495 310 32 20-32 20M955 310l32 20-32 20" fill="none" stroke="${light}" stroke-width="8"/><g fill="${primary}" stroke="${light}" stroke-width="4"><rect x="90" y="235" width="250" height="190" rx="32"/><rect x="475" y="235" width="250" height="190" rx="32"/><rect x="860" y="235" width="250" height="190" rx="32"/></g>`;
   if (kind === 1) return `<g fill="none" stroke-linecap="round"><path d="M220 440A390 390 0 0 1 980 440" stroke="${primary}" stroke-width="52"/><path d="M220 440A390 390 0 0 1 720 98" stroke="${accent}" stroke-width="52"/><path d="M600 420 845 220" stroke="${light}" stroke-width="14"/><circle cx="600" cy="420" r="38" fill="${primary}" stroke="${light}" stroke-width="8"/></g>`;
   if (kind === 2) return `<g stroke="${light}" stroke-width="5"><ellipse cx="600" cy="165" rx="310" ry="92" fill="${primary}"/><path d="M290 165v150c0 50 139 92 310 92s310-42 310-92V165" fill="${primary}"/><ellipse cx="600" cy="315" rx="310" ry="92" fill="${primary}"/><path d="M290 315v150c0 50 139 92 310 92s310-42 310-92V315" fill="${primary}"/><ellipse cx="600" cy="465" rx="310" ry="92" fill="${primary}"/></g><path d="M825 205h220v250H825" fill="none" stroke="${accent}" stroke-width="14" stroke-linecap="round"/>`;
