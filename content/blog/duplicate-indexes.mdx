@@ -1,13 +1,14 @@
 ---
 title: Spotting duplicate and near-duplicate indexes
-description: Same key columns, overlapping includes, and the write cost of keeping both.
-summary: Drop the redundant cover once you prove the survivor serves the same predicates.
-date: 2026-08-07
+description: 'Same key columns, overlapping includes, and the write cost of keeping both.'
+summary: >-
+  Drop the redundant cover once you prove the survivor serves the same
+  predicates.
+date: 2026-08-07T00:00:00.000Z
 published: true
 category: Index
 subcategory: Duplicate index
 ---
-
 Dummy guide: exact duplicates are easy; near-duplicates hide in INCLUDE lists.
 
 Compare key column order first, then included columns. If index A is a strict subset of index B
@@ -16,3 +17,127 @@ compression settings before you drop A.
 
 Document the change in your change ticket so the next incident does not recreate the duplicate
 from an old create script.
+
+## Why index overlap deserves a method
+
+The central principle is that duplicate and near-duplicate indexes increase storage and write cost while rarely providing equal read value. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
+
+Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
+
+## Evidence to collect
+
+Use evidence from the same time window whenever possible:
+
+- key columns and order
+- included columns and filters
+- usage since the last restart
+- write rate, size, and maintenance cost
+
+Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
+
+Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
+
+## A practical workflow
+
+1. Inventory definitions and dependencies.
+2. Group exact and overlapping candidates.
+3. Check plans and critical workloads.
+4. Remove one candidate at a time with a rollback script.
+
+Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
+
+For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
+
+## Common mistakes
+
+Avoid these shortcuts:
+
+- dropping indexes from usage counters alone
+- ignoring uniqueness or filtered predicates
+- combining indexes into an excessively wide replacement
+
+These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
+
+## Verification and completion
+
+Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Spotting duplicate and near-duplicate indexes**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
+
+The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
+
+## Why index overlap deserves a method
+
+The central principle is that duplicate and near-duplicate indexes increase storage and write cost while rarely providing equal read value. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
+
+Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
+
+## Evidence to collect
+
+Use evidence from the same time window whenever possible:
+
+- key columns and order
+- included columns and filters
+- usage since the last restart
+- write rate, size, and maintenance cost
+
+Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
+
+Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
+
+## A practical workflow
+
+1. Inventory definitions and dependencies.
+2. Group exact and overlapping candidates.
+3. Check plans and critical workloads.
+4. Remove one candidate at a time with a rollback script.
+
+Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
+
+For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
+
+## Common mistakes
+
+Avoid these shortcuts:
+
+- dropping indexes from usage counters alone
+- ignoring uniqueness or filtered predicates
+- combining indexes into an excessively wide replacement
+
+These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
+
+## Verification and completion
+
+Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Spotting duplicate and near-duplicate indexes**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
+
+The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
+
+## Download and run the diagnostic
+
+<div className="sql-download-panel">
+
+**Duplicate and overlapping index analysis**
+
+<DownloadLink href="/downloads/sql-server-diagnostics/duplicate_index_analysis.sql">Download duplicate_index_analysis.sql</DownloadLink>
+
+</div>
+
+### Before you run it
+
+- Run the script first on a non-production or read-only connection when possible.
+- Review the complete SQL file before execution and confirm that the connected instance is the intended target.
+- Required access: VIEW DATABASE STATE on the databases being reviewed.
+- Open SQL Server Management Studio or Azure Data Studio, connect to the instance, open the downloaded file, and select **Execute**. Do not run diagnostic scripts through an application login.
+- Save the result grid with the server name, collection time, and incident window. DMV output changes over time and often resets after a SQL Server restart.
+
+### What the script does
+
+Compares index keys, included columns, filters, constraints, size, and usage to identify exact and near-duplicate candidates. The download is intended for diagnosis and does not apply an automatic remediation. Read every statement anyway, especially when adapting the script for automation or a different SQL Server version.
+
+<details className="sql-output-guide">
+<summary>How to read the output</summary>
+
+Separate exact duplicates from merely overlapping indexes. Preserve primary keys, unique constraints, filtered predicates, and indexes used by rare business cycles. Treat generated drop text as a review artifact and validate plans before removing anything.
+
+Do not make a production change from one row alone. Correlate the result with workload timing, Query Store or execution plans, Windows and storage evidence, application telemetry, and recent deployments. Capture a second sample after remediation to prove that the intended metric changed without creating a regression elsewhere.
+
+</details>
+

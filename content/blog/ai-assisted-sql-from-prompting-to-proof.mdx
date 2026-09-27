@@ -1,12 +1,15 @@
 ---
 title: AI-Assisted SQL Development — From Prompting to Proof
-description: A practical guide to using Copilot and AI coding agents for SQL Server without surrendering correctness, security, or performance validation.
-summary: Choose the right AI surface, write evidence-rich prompts, constrain agent behavior, and prove every SQL rewrite with plans, metrics, and result checks.
-date: 2026-09-23
+description: >-
+  A practical guide to using Copilot and AI coding agents for SQL Server without
+  surrendering correctness, security, or performance validation.
+summary: >-
+  Choose the right AI surface, write evidence-rich prompts, constrain agent
+  behavior, and prove every SQL rewrite with plans, metrics, and result checks.
+date: 2026-09-23T00:00:00.000Z
 published: true
 category: AI and SQL
 ---
-
 AI can explain a stored procedure, propose a rewrite, inspect schema context, and help organize a tuning investigation. It can also invent objects, miss a `NULL` edge case, change duplicate semantics, or confidently claim a performance gain it never measured.
 
 The useful operating principle is simple:
@@ -174,3 +177,34 @@ SQL text alone cannot prove that blocking, storage latency, memory pressure, app
 7. Repeat the validation checklist until it becomes routine.
 
 The goal is not to make AI the final authority. It is to use AI as a fast collaborator inside an evidence-driven engineering process.
+
+## Download and run the diagnostic
+
+<div className="sql-download-panel">
+
+**Top resource-consuming queries**
+
+<DownloadLink href="/downloads/sql-server-diagnostics/top_resource_queries.sql">Download top_resource_queries.sql</DownloadLink>
+
+</div>
+
+### Before you run it
+
+- Review every statement and confirm the connection points to the intended SQL Server database server.
+- Run through a non-production or read-only diagnostic account first when possible.
+- Required access: VIEW SERVER STATE.
+- Save the output with the server name, database name, collection time, and workload window so another engineer can reproduce the analysis.
+
+### What it does
+
+Ranks cached queries by CPU, elapsed time, logical reads, writes, and execution count. The script is diagnostic and does not apply an automatic remediation. Result values still need workload context, a second supporting signal, and a before-and-after comparison.
+
+<details className="sql-output-guide">
+<summary>How to read the output values</summary>
+
+Use Total_CPU, Total_Elapsed, and Total_Logical_Reads to find expensive workload. Divide totals by Execution_Count when comparing frequent small queries with rare large queries. Query_Text and database context identify the statement to validate with an actual plan.
+
+Investigate warning values in business context. Verify the suspected cause with plans, history, operating-system telemetry, application behavior, or a second sample before changing production. After any remediation, rerun the same script and compare the same fields.
+
+</details>
+

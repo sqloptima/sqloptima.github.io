@@ -1,12 +1,135 @@
 ---
 title: Blocking chains beat single-query blame
-description: Latency often starts with a blocker, not the query that timed out.
+description: 'Latency often starts with a blocker, not the query that timed out.'
 summary: Always capture the head blocker when waits spike.
-date: 2026-07-14
+date: 2026-07-14T00:00:00.000Z
 published: true
 ---
-
 The statement that timed out is frequently a victim, not the root cause.
 
 When `LCK_*` waits rise, identify the head of the blocking chain and the transaction that holds it.
 Tools that only list slow queries without blockers send teams down the wrong rabbit hole.
+
+## Why blocking analysis deserves a method
+
+The central principle is that the head blocker matters more than the longest list of waiting sessions. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
+
+Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
+
+## Evidence to collect
+
+Use evidence from the same time window whenever possible:
+
+- lead blocker session and open transaction
+- wait duration and lock resource
+- executing statement and transaction age
+- application name, host, and affected requests
+
+Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
+
+Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
+
+## A practical workflow
+
+1. Capture the blocking chain before intervening.
+2. Identify the transaction owner.
+3. Choose the least disruptive resolution.
+4. Correct the query, transaction scope, or access pattern.
+
+Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
+
+For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
+
+## Common mistakes
+
+Avoid these shortcuts:
+
+- killing an arbitrary waiting session
+- using NOLOCK as a universal fix
+- ignoring application transaction boundaries
+
+These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
+
+## Verification and completion
+
+Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Blocking chains beat single-query blame**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
+
+The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
+
+## Why blocking analysis deserves a method
+
+The central principle is that the head blocker matters more than the longest list of waiting sessions. A single metric, recommendation, or successful command is not enough. The decision has to connect an observed symptom to a plausible cause, a controlled change, and a result that can be verified under the workload that matters.
+
+Start by writing down the scope. Name the instance, database, application path, business window, and user impact. Record what changed recently and what must remain unchanged. This prevents a useful investigation from turning into an unrelated cleanup exercise, and it gives reviewers a clear boundary for the work.
+
+## Evidence to collect
+
+Use evidence from the same time window whenever possible:
+
+- lead blocker session and open transaction
+- wait duration and lock resource
+- executing statement and transaction age
+- application name, host, and affected requests
+
+Capture timestamps, server and database identity, relevant configuration, and the query or operation that produced the observation. Cumulative counters need a baseline or delta. Plans need their parameter and runtime context. Screenshots can help explain a result, but retain the underlying values or scripts so another engineer can reproduce the conclusion.
+
+Do not begin with a preferred fix. First decide what evidence would confirm the suspected cause and what evidence would disprove it. That small discipline reduces confirmation bias and makes rollback decisions much easier.
+
+## A practical workflow
+
+1. Capture the blocking chain before intervening.
+2. Identify the transaction owner.
+3. Choose the least disruptive resolution.
+4. Correct the query, transaction scope, or access pattern.
+
+Make one meaningful change at a time. Run it first in a safe environment with representative volume and distribution. Compare the same workload before and after the change, and keep the original script or configuration ready for rollback. If several changes ship together, the team loses the ability to explain which one helped or harmed the system.
+
+For production work, record the owner, review time, execution window, expected impact, stop condition, and rollback trigger. The result should be understandable to the next engineer on call without relying on memory or chat history.
+
+## Common mistakes
+
+Avoid these shortcuts:
+
+- killing an arbitrary waiting session
+- using NOLOCK as a universal fix
+- ignoring application transaction boundaries
+
+These mistakes are attractive because they produce a quick action. They are risky because they detach the action from workload evidence. A change can appear successful during a quiet test and still fail under concurrency, skew, maintenance activity, or a different business cycle.
+
+## Verification and completion
+
+Define completion before making the change. Confirm correctness first, then compare latency, throughput, reads, CPU, waits, storage behavior, or recovery time as appropriate for **Blocking chains beat single-query blame**. Test negative and boundary cases, not only the path expected to succeed. Watch the system long enough to cover the relevant workload pattern.
+
+The work is complete when the evidence supports the outcome, monitoring can detect regression, and the team has a documented rollback or recovery path. If the result is inconclusive, keep the finding open and state what additional observation is needed rather than presenting an assumption as a fix.
+
+## Download and run the diagnostic
+
+<div className="sql-download-panel">
+
+**Blocking-chain and deadlock diagnostic**
+
+<DownloadLink href="/downloads/sql-server-diagnostics/blocking_and_deadlocks.sql">Download blocking_and_deadlocks.sql</DownloadLink>
+
+</div>
+
+### Before you run it
+
+- Run the script first on a non-production or read-only connection when possible.
+- Review the complete SQL file before execution and confirm that the connected instance is the intended target.
+- Required access: VIEW SERVER STATE; access to the system_health Extended Events session for deadlock XML.
+- Open SQL Server Management Studio or Azure Data Studio, connect to the instance, open the downloaded file, and select **Execute**. Do not run diagnostic scripts through an application login.
+- Save the result grid with the server name, collection time, and incident window. DMV output changes over time and often resets after a SQL Server restart.
+
+### What the script does
+
+Returns active blockers and waiters, a blocking hierarchy, current SQL text, and recent deadlock graphs from system_health. The download is intended for diagnosis and does not apply an automatic remediation. Read every statement anyway, especially when adapting the script for automation or a different SQL Server version.
+
+<details className="sql-output-guide">
+<summary>How to read the output</summary>
+
+Find the row marked HEAD BLOCKER and confirm its transaction owner before taking action. Wait_Time_ms shows impact, while Wait_Type and Wait_Resource show what is blocked. For deadlocks, open Deadlock_XML and identify the victim, competing statements, objects, indexes, and lock modes.
+
+Do not make a production change from one row alone. Correlate the result with workload timing, Query Store or execution plans, Windows and storage evidence, application telemetry, and recent deployments. Capture a second sample after remediation to prove that the intended metric changed without creating a regression elsewhere.
+
+</details>
+

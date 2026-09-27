@@ -1,11 +1,14 @@
 ---
 title: SQL Server stored procedures vs inline SQL
-description: When parameterized inline SQL wins for microservices, where SPs still belong, and how to implement both without plan-cache disasters.
-summary: The real fight is disciplined parameterized SQL versus undisciplined string-built queries — not SP versus inline.
-date: 2026-08-03
+description: >-
+  When parameterized inline SQL wins for microservices, where SPs still belong,
+  and how to implement both without plan-cache disasters.
+summary: >-
+  The real fight is disciplined parameterized SQL versus undisciplined
+  string-built queries — not SP versus inline.
+date: 2026-08-03T00:00:00.000Z
 published: true
 ---
-
 For years DBAs and developers argued past each other. DBAs wanted stored procedures for plan stability, hotfixes, and a single place to tune. Developers wanted SQL in the app for version control, CI, and service ownership.
 
 In a monolith with shared databases, SPs often won by default. In microservices with a database per service, shared procedures and cross-database joins fight the architecture. Logic moves to the application layer — but that does not mean “throw SQL into a string and ship.”
@@ -157,3 +160,34 @@ Those concerns are legitimate. The answer is not “ban inline.” It is **raise
 Moving off shared procedures is often the right call for microservices. Doing it with string-built SQL and row-by-row updates is how you recreate the old outages in a new repo.
 
 Parameterize everything. Keep heavy orchestration in procedures when it belongs there. Use Query Store on both. The winning side is the team that treats SQL as production code — whether that code lives in a `.sql` proc or a C# constant.
+
+## Download and run the diagnostic
+
+<div className="sql-download-panel">
+
+**Stored procedure performance audit**
+
+<DownloadLink href="/downloads/sql-server-diagnostics/stored_procedure_performance_audit.sql">Download stored_procedure_performance_audit.sql</DownloadLink>
+
+</div>
+
+### Before you run it
+
+- Review every statement and confirm the connection points to the intended SQL Server database server.
+- Run through a non-production or read-only diagnostic account first when possible.
+- Required access: VIEW SERVER STATE.
+- Save the output with the server name, database name, collection time, and workload window so another engineer can reproduce the analysis.
+
+### What it does
+
+Ranks cached stored-procedure workload by executions, CPU, elapsed time, reads, writes, and recency. The script is diagnostic and does not apply an automatic remediation. Result values still need workload context, a second supporting signal, and a before-and-after comparison.
+
+<details className="sql-output-guide">
+<summary>How to read the output values</summary>
+
+Use Execution_Count and average values to separate frequent inexpensive procedures from rare heavy ones. Last_Execution_Time and cache age affect interpretation. Compare procedure metrics with equivalent inline workload using Query Store or controlled tests.
+
+Investigate warning values in business context. Verify the suspected cause with plans, history, operating-system telemetry, application behavior, or a second sample before changing production. After any remediation, rerun the same script and compare the same fields.
+
+</details>
+
