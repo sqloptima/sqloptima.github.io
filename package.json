@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
-    "audit:static": "node scripts/audit-static-boundary.mjs"
+    "audit:static": "node scripts/audit-static-boundary.mjs",
+    "audit:content": "node scripts/audit-content-quality.mjs"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

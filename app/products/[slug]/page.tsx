@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProduct, products } from "@/lib/products";
-import { withBasePath } from "@/lib/paths";
+import { absoluteUrl, withBasePath } from "@/lib/paths";
 
 export function generateStaticParams() {
   return products.map(({ slug }) => ({ slug }));
@@ -11,14 +11,16 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const product = getProduct((await params).slug);
   if (!product) return {};
-  return { title: product.title, description: product.description };
+  return { title: product.title, description: product.description, alternates: { canonical: `/products/${product.slug}/` }, openGraph: { title: `${product.title} | SQL Optima`, description: product.description, images: [{ url: product.image, alt: `${product.title} ${product.imageKind}` }] } };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const product = getProduct((await params).slug);
   if (!product) notFound();
 
+  const structuredData = { "@context": "https://schema.org", "@type": "SoftwareApplication", name: product.title, description: product.description, applicationCategory: "DeveloperApplication", operatingSystem: product.requirements?.[0] ?? "See repository requirements", url: absoluteUrl(`/products/${product.slug}/`), image: absoluteUrl(product.image) };
   return <main className="product-page">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replaceAll("<", "\\u003c") }} />
     <section className="product-detail-hero">
       <div className="page-wrap product-detail-grid">
         <div className="product-detail-copy">
@@ -28,11 +30,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="product-detail-lede">{product.introduction}</p>
           <ul className="product-detail-highlights">{product.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>
           <div className="product-detail-actions">
-            {product.release && <a className="product-download" href={product.release} target="_blank" rel="noreferrer">Download v0.0.1 <span aria-hidden>↓</span></a>}
+            {product.release && <a className="product-download" href={product.release} target="_blank" rel="noreferrer">{product.releaseLabel ?? "View release"} <span aria-hidden>↓</span></a>}
             <a className={product.release ? "product-repository" : "product-download"} href={product.repository} target="_blank" rel="noreferrer">View repository <span aria-hidden>↗</span></a>
           </div>
         </div>
-        <div className="product-detail-visual"><img src={withBasePath(product.image)} alt={`${product.title} interface`} /></div>
+        <figure className={`product-detail-visual product-${product.imageKind}`}><img src={withBasePath(product.image)} alt={`${product.title} ${product.imageKind}`} /><figcaption><strong>{product.imageKind === "screenshot" ? "Product screenshot" : "Illustration"}</strong>{product.imageCaption}</figcaption></figure>
       </div>
     </section>
     <section className="page-wrap product-capabilities" aria-labelledby="capabilities-title">
@@ -41,6 +43,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       {product.facts && <section className="product-readme-section" aria-labelledby="facts-title">
         <div className="product-section-heading"><p className="eyebrow">From the repository</p><h2 id="facts-title">Product facts</h2></div>
         <dl className="product-facts">{product.facts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>
+      </section>}
+      <section className="product-readme-section" aria-labelledby="support-title">
+        <div className="product-section-heading"><p className="eyebrow">Verified scope</p><h2 id="support-title">Support and project status</h2></div>
+        <dl className="product-facts"><div><dt>Project status</dt><dd>{product.maturity}</dd></div><div><dt>Engine coverage</dt><dd>{product.engineSupport.map(({ engine, level }) => `${engine}: ${level}`).join(" · ")}</dd></div><div><dt>Last reviewed</dt><dd>{product.verifiedAt}</dd></div><div><dt>Evidence</dt><dd><a href={product.repository} target="_blank" rel="noreferrer">Repository documentation ↗</a></dd></div></dl>
+      </section>
+      {product.trust && <section className="product-readme-section" aria-labelledby="trust-title">
+        <div className="product-section-heading"><p className="eyebrow">Project evidence</p><h2 id="trust-title">Trust and maintenance links</h2></div>
+        <div className="product-trust-links">{product.trust.map((item) => <a href={item.href} target="_blank" rel="noreferrer" key={item.label}><strong>{item.label}</strong><span>{item.value ?? "Open on GitHub"}</span><b aria-hidden>↗</b></a>)}</div>
       </section>}
       {product.workflow && <section className="product-readme-section" aria-labelledby="workflow-title">
         <div className="product-section-heading"><p className="eyebrow">How it works</p><h2 id="workflow-title">Typical workflow</h2></div>

@@ -5,8 +5,16 @@ export type Product = {
   description: string;
   introduction: string;
   image: string;
+  imageKind: "screenshot" | "illustration";
+  imageCaption: string;
   repository: string;
   release?: string;
+  releaseLabel?: string;
+  outcome: string;
+  maturity: "Project" | "Preview" | "Lab" | "Knowledge";
+  engineSupport: readonly { engine: "SQL Server" | "PostgreSQL"; level: "Supported" | "Source" | "Target" | "Lab" | "Guidance" }[];
+  verifiedAt: string;
+  trust?: { label: string; href: string; value?: string }[];
   highlights: readonly string[];
   capabilities: readonly { title: string; description: string }[];
   facts?: readonly { label: string; value: string }[];
@@ -24,8 +32,22 @@ export const products: readonly Product[] = [
     description: "Self-hosted SQL tuning and monitoring with deep dashboards, automated diagnostics, and actionable guidance for SQL Server and PostgreSQL.",
     introduction: "SQL Optima combines live engine telemetry with expert rules so DBAs can move from a symptom to the workload, query, configuration, or capacity issue behind it.",
     image: "/images/monitoring/sqlserver-dashboard.png",
+    imageKind: "screenshot",
+    imageCaption: "Current SQL Server dashboard from the SQL Monitoring repository.",
     repository: "https://github.com/rsharma155/sql_optima",
-    highlights: ["14 PostgreSQL dashboards", "16 SQL Server dashboards", "100% self-hosted"],
+    outcome: "Trace a database symptom to the workload, query, or resource behind it.",
+    maturity: "Project",
+    engineSupport: [{ engine: "SQL Server", level: "Supported" }, { engine: "PostgreSQL", level: "Supported" }],
+    verifiedAt: "2026-09-27",
+    release: "https://github.com/rsharma155/sql_optima/releases",
+    releaseLabel: "View releases",
+    trust: [
+      { label: "License", value: "MIT", href: "https://github.com/rsharma155/sql_optima/blob/main/LICENSE" },
+      { label: "Documentation", href: "https://github.com/rsharma155/sql_optima/tree/main/docs" },
+      { label: "Security", href: "https://github.com/rsharma155/sql_optima/blob/main/SECURITY.md" },
+      { label: "Issues", href: "https://github.com/rsharma155/sql_optima/issues" },
+    ],
+    highlights: ["14 PostgreSQL dashboards", "15 SQL Server dashboards", "100% self-hosted"],
     capabilities: [
       { title: "Triage the estate", description: "Use control-center dashboards for sessions, CPU, memory, I/O, waits, locks, storage, backups, and security." },
       { title: "Analyze expensive SQL", description: "Investigate Query Store and pg_stat_statements workloads, regressions, plan instability, and EXPLAIN plans." },
@@ -44,8 +66,20 @@ export const products: readonly Product[] = [
     description: "SQL Server schema comparison with a Windows GUI, a cross-platform .NET 8 CLI, ordered deployment scripts, and explicit review of risky changes.",
     introduction: "Compare a source-of-truth database with one or many targets, review every object difference, and generate a self-contained deployment script without a PowerShell runtime dependency.",
     image: "/images/products/sql-optima-schema-compare-hero.png",
+    imageKind: "screenshot",
+    imageCaption: "Current Schema Compare desktop interface from the project repository.",
     repository: "https://github.com/rsharma155/sqloptima_compare",
     release: "https://github.com/rsharma155/sqloptima_compare/releases/tag/v0.0.1",
+    releaseLabel: "Download v0.0.1",
+    outcome: "Find schema drift and review an ordered deployment script before release.",
+    maturity: "Project",
+    engineSupport: [{ engine: "SQL Server", level: "Supported" }],
+    verifiedAt: "2026-09-27",
+    trust: [
+      { label: "Release", value: "v0.0.1", href: "https://github.com/rsharma155/sqloptima_compare/releases/tag/v0.0.1" },
+      { label: "Documentation", href: "https://github.com/rsharma155/sqloptima_compare/tree/main/docs" },
+      { label: "Issues", href: "https://github.com/rsharma155/sqloptima_compare/issues" },
+    ],
     highlights: ["Windows GUI and cross-platform CLI", "One source to many targets", "Safe and manual scripts separated"],
     capabilities: [
       { title: "Compare the full schema", description: "Diff schemas, tables, columns, indexes, keys, constraints, triggers, views, procedures, functions, types, sequences, synonyms, and DDL triggers." },
@@ -65,7 +99,21 @@ export const products: readonly Product[] = [
     description: "A full-stack SQL Server to PostgreSQL migration platform for assessment, AST-based conversion, high-throughput data movement, validation, CDC, and cutover.",
     introduction: "Treat migration as a controlled lifecycle. SQL Optima parses T-SQL into an AST, moves data through a Go engine, validates the result at several levels, and can keep the target synchronized for cutover.",
     image: "/images/products/sql-optima-migration-hero.png",
+    imageKind: "illustration",
+    imageCaption: "Concept illustration of the SQL Server-to-PostgreSQL migration path; not a product screenshot.",
     repository: "https://github.com/rsharma155/sqloptima_migration",
+    outcome: "Assess and rehearse a SQL Server-to-PostgreSQL migration before cutover.",
+    maturity: "Preview",
+    engineSupport: [{ engine: "SQL Server", level: "Source" }, { engine: "PostgreSQL", level: "Target" }],
+    verifiedAt: "2026-09-27",
+    release: "https://github.com/rsharma155/sqloptima_migration/releases/tag/v0.2.1",
+    releaseLabel: "Download v0.2.1",
+    trust: [
+      { label: "License", value: "MIT", href: "https://github.com/rsharma155/sqloptima_migration/blob/main/LICENSE" },
+      { label: "Release", value: "v0.2.1", href: "https://github.com/rsharma155/sqloptima_migration/releases/tag/v0.2.1" },
+      { label: "Security", href: "https://github.com/rsharma155/sqloptima_migration/blob/main/SECURITY.md" },
+      { label: "Issues", href: "https://github.com/rsharma155/sqloptima_migration/issues" },
+    ],
     highlights: ["AST-based T-SQL conversion", "Go binary-COPY data plane", "L1–L4 validation and CDC"],
     capabilities: [
       { title: "Assess readiness", description: "Classify tables as safe, warning, or blocker, estimate migration effort, and surface schema and code concerns." },
@@ -85,7 +133,18 @@ export const products: readonly Product[] = [
     description: "PowerShell-based SQL Server assessment with detailed or lightweight collection modes, health scoring, and HTML or Excel reporting.",
     introduction: "Collect repeatable evidence before an architecture, modernization, migration, or remediation engagement. Choose a detailed assessment or a faster limited run and produce a report plus an audit log.",
     image: "/images/products/dba-handbook-hero.png",
+    imageKind: "illustration",
+    imageCaption: "Assessment workflow illustration; not a product screenshot.",
     repository: "https://github.com/rsharma155/dba_handbook/tree/main/sql_server_assessment_tool/ps_report_collector",
+    outcome: "Turn a SQL Server estate into structured assessment evidence and findings.",
+    maturity: "Project",
+    engineSupport: [{ engine: "SQL Server", level: "Supported" }],
+    verifiedAt: "2026-09-27",
+    trust: [
+      { label: "License", value: "MIT", href: "https://github.com/rsharma155/dba_handbook/blob/main/LICENSE" },
+      { label: "Documentation", href: "https://github.com/rsharma155/dba_handbook/tree/main/sql_server_assessment_tool/ps_report_collector" },
+      { label: "Issues", href: "https://github.com/rsharma155/dba_handbook/issues" },
+    ],
     highlights: ["Detailed and minimal collectors", "HTML and Excel output", "Health score and prioritized findings"],
     capabilities: [
       { title: "Choose the collection depth", description: "Use the detailed collector for a Phase-1 architectural assessment or the minimal collector for a faster, lighter evidence share." },
@@ -105,8 +164,21 @@ export const products: readonly Product[] = [
     description: "Self-hosted SQL Server backup and disaster-recovery platform with Windows services, a local control panel, remote web operations, and local or cloud storage.",
     introduction: "Schedule and operate full, differential, and transaction log backups from one backup server, with integrity verification before upload and durable history for local and cloud copies.",
     image: "/images/products/sqloptima-backup-pro-hero.png",
+    imageKind: "illustration",
+    imageCaption: "Backup and storage concept illustration; not a product screenshot.",
     repository: "https://github.com/rsharma155/sqloptima_backup",
     release: "https://github.com/rsharma155/sqloptima_backup/releases/tag/v0.0.1",
+    releaseLabel: "Download v0.0.1",
+    outcome: "Run, verify, and retain SQL Server backup chains for recovery.",
+    maturity: "Preview",
+    engineSupport: [{ engine: "SQL Server", level: "Supported" }],
+    verifiedAt: "2026-09-27",
+    trust: [
+      { label: "License", value: "MIT", href: "https://github.com/rsharma155/sqloptima_backup/blob/main/LICENSE" },
+      { label: "Release", value: "v0.0.1", href: "https://github.com/rsharma155/sqloptima_backup/releases/tag/v0.0.1" },
+      { label: "Documentation", href: "https://github.com/rsharma155/sqloptima_backup/tree/main/docs" },
+      { label: "Issues", href: "https://github.com/rsharma155/sqloptima_backup/issues" },
+    ],
     highlights: ["FULL, DIFF, and LOG chains", "VERIFYONLY before upload", "Local and multi-cloud retention"],
     capabilities: [
       { title: "Protect the backup chain", description: "Run SMO-based full, differential, and log backups with compression, CHECKSUM, optional encryption, and chain prerequisite checks." },
@@ -126,7 +198,18 @@ export const products: readonly Product[] = [
     description: "Searchable operational guidance for SQL Server, PostgreSQL, and more.",
     introduction: "Use practical checklists, scripts, and explanations while you diagnose, maintain, migrate, and recover production databases.",
     image: "/images/handbook/knowledgebase-hero.png",
+    imageKind: "illustration",
+    imageCaption: "Knowledge-base illustration representing handbook guides and scripts.",
     repository: "https://github.com/rsharma155/dba_handbook",
+    outcome: "Keep operational checklists and working scripts beside the database task.",
+    maturity: "Knowledge",
+    engineSupport: [{ engine: "SQL Server", level: "Guidance" }, { engine: "PostgreSQL", level: "Guidance" }],
+    verifiedAt: "2026-09-27",
+    trust: [
+      { label: "License", value: "MIT", href: "https://github.com/rsharma155/dba_handbook/blob/main/LICENSE" },
+      { label: "Documentation", href: "https://github.com/rsharma155/dba_handbook" },
+      { label: "Issues", href: "https://github.com/rsharma155/dba_handbook/issues" },
+    ],
     highlights: ["Production playbooks", "Portable guidance", "Ready-to-run scripts"],
     capabilities: [
       { title: "Follow proven checklists", description: "Use step-by-step operational guidance when consistency matters more than memory." },
@@ -140,8 +223,18 @@ export const products: readonly Product[] = [
     eyebrow: "Practice failure before production",
     description: "Docker-based PostgreSQL Patroni and SQL Server three-node labs with a web UI for CRUD traffic, failover observation, reports, and scheduled backups.",
     introduction: "Start both database environments from one cross-platform launcher, generate concurrent application traffic, and practice high-availability operations without building a lab by hand.",
-    image: "/images/monitoring/postgres-dashboard.png",
+    image: "/images/practice/banners/availability.png",
+    imageKind: "illustration",
+    imageCaption: "High-availability lab concept illustration; not a product screenshot.",
     repository: "https://github.com/rsharma155/sqlserver_postgres_ha_cluster",
+    outcome: "Rehearse database traffic, backup, and failure scenarios away from production.",
+    maturity: "Lab",
+    engineSupport: [{ engine: "SQL Server", level: "Lab" }, { engine: "PostgreSQL", level: "Lab" }],
+    verifiedAt: "2026-09-27",
+    trust: [
+      { label: "License", value: "MIT", href: "https://github.com/rsharma155/sqlserver_postgres_ha_cluster/blob/main/LICENSE" },
+      { label: "Issues", href: "https://github.com/rsharma155/sqlserver_postgres_ha_cluster/issues" },
+    ],
     highlights: ["PostgreSQL Patroni HA", "SQL Server three-node lab", "Web-based CRUD load generator"],
     capabilities: [
       { title: "Launch both lab environments", description: "Run a three-node Patroni cluster with etcd and HAProxy alongside three SQL Server nodes with replication and log shipping." },

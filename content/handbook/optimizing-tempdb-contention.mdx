@@ -1,23 +1,122 @@
 ---
 title: Optimizing TempDB Contention
-description: Reduce allocation and metadata contention in SQL Server TempDB.
-summary: Practical checks when TempDB waits dominate SQL Server workloads.
+description: Diagnose allocation and metadata contention in SQL Server TempDB before choosing a remedy.
+summary: Distinguish allocation-page pressure from metadata contention, then verify the targeted change.
 date: 2026-07-10
 published: true
 ---
 
-When PAGELATCH waits cluster on TempDB, start by confirming file count, autogrowth
-settings, and spilled sorts.
+TempDB contention is not one problem with one fix. A `PAGELATCH_*` wait in database ID `2` tells you that sessions are competing for an in-memory TempDB page, but the affected page determines what to investigate next.
 
-Trace classic patterns: too few data files, uneven growth events, and version store
-pressure from long transactions.
+This guide is based on Haripriya Naidu's [TempDB Contention: How to Identify and Resolve It](https://www.youtube.com/watch?v=ffgQWg3f76g) DataMinds session. The decision path below also links to current Microsoft documentation where configuration or version behavior matters.
 
-Validate with wait stats and file IO stall metrics before changing configuration in
-production.
+## Start with the wait resource
+
+Capture active requests while the slowdown is occurring. Look for `PAGELATCH_*` waits whose wait resource starts with database ID `2`:
+
+```text
+2:8:123
+```
+
+The three values are the database ID, file ID, and page ID. Do not confuse `PAGELATCH` with `PAGEIOLATCH`: the former normally means sessions are contending for an in-memory page; the latter is associated with reading a page from storage.
+
+Use `sys.fn_PageResCracker` and `sys.dm_db_page_info` on supported SQL Server versions to identify the page. The result separates two common cases:
+
+| Affected page | Likely problem | First investigation |
+| --- | --- | --- |
+| PFS, GAM, or SGAM | Object-allocation contention | TempDB file count, equal sizing, growth, and workload allocation rate |
+| TempDB system-object page | Metadata contention | Repeated temporary-object DDL and TempDB metadata configuration |
+
+Adding files before making this distinction can leave metadata contention untouched.
+
+## Object-allocation contention
+
+Inserts, updates, and deletes against temporary objects require allocation work. Under high concurrency, sessions can converge on Page Free Space (PFS), Global Allocation Map (GAM), or Shared Global Allocation Map (SGAM) pages.
+
+If those page types are the hotspot, inspect the current data files:
 
 ```sql
--- example check
-SELECT wait_type, waiting_tasks_count
-FROM sys.dm_os_wait_stats
-WHERE wait_type LIKE 'PAGELATCH%';
+USE tempdb;
+GO
+
+SELECT
+    name,
+    file_id,
+    type_desc,
+    size * 8.0 / 1024 AS size_mb,
+    growth,
+    is_percent_growth,
+    physical_name
+FROM sys.database_files
+ORDER BY type, file_id;
 ```
+
+All TempDB data files should use the same initial size and growth settings. Microsoft recommends starting with up to eight equally sized data files, depending on logical processor count, and increasing in multiples of four only if allocation contention remains. That is a starting point, not a reason to add files when the wait resource indicates a different problem.
+
+Pre-size files for the normal workload so autogrowth is exceptional rather than routine. When adding or resizing files, preserve equal free space as well as equal configured size; proportional fill favors files with more free space.
+
+## Metadata contention
+
+Creating, altering, indexing, and dropping temporary tables modifies TempDB system metadata. A frequently executed stored procedure can therefore create a metadata bottleneck even when the data-file layout is already appropriate.
+
+When the hot page belongs to a TempDB system object, review the code path before changing file count:
+
+- Create temporary tables inside stored procedures when practical so they can be cached.
+- Keep the table definition stable after creation.
+- Define required keys and indexes inline when the design allows it.
+- Avoid separate DDL that changes the temporary table after creation.
+- Test whether explicit `DROP TABLE` statements are necessary; scope cleanup may already do the work.
+
+These are workload changes, so validate semantics as well as performance. An explicit drop or later index creation may exist for a legitimate reason.
+
+## Memory-optimized TempDB metadata
+
+SQL Server 2019 and later can use memory-optimized structures for TempDB system metadata:
+
+```sql
+ALTER SERVER CONFIGURATION
+SET MEMORY_OPTIMIZED TEMPDB_METADATA = ON;
+```
+
+The SQL Server service must restart before the setting takes effect. Verify it after restart:
+
+```sql
+SELECT SERVERPROPERTY('IsTempdbMetadataMemoryOptimized');
+```
+
+Enable this feature only after confirming that temporary-object metadata contention materially affects the workload. It has documented limitations and memory considerations, so test on the same SQL Server build and representative concurrency before production rollout. Keep a rollback plan:
+
+```sql
+ALTER SERVER CONFIGURATION
+SET MEMORY_OPTIMIZED TEMPDB_METADATA = OFF;
+```
+
+Disabling it also requires a restart.
+
+## A repeatable troubleshooting sequence
+
+1. Capture active requests during the affected workload window.
+2. Confirm `PAGELATCH_*` and database ID `2`.
+3. Decode the page resource and identify the page type.
+4. For PFS, GAM, or SGAM pressure, review equal file sizing, growth, free space, and file count.
+5. For system-object pages, review temporary-table DDL and caching opportunities.
+6. Consider memory-optimized metadata only for confirmed metadata contention on a supported version.
+7. Re-run the same workload and compare wait duration, throughput, and execution time.
+
+Change one variable at a time. A lower wait count is useful only when the same workload still produces correct results and overall performance improves.
+
+## Common diagnostic mistakes
+
+- Treating every TempDB slowdown as an allocation problem.
+- Adding data files without identifying the page type.
+- Using unequal file sizes or growth increments.
+- Treating `PAGEIOLATCH` as equivalent to `PAGELATCH`.
+- Assuming a newer SQL Server version eliminates every form of TempDB contention.
+- Enabling memory-optimized metadata without confirming metadata contention.
+- Comparing cumulative wait counters without a workload window or baseline.
+
+## References
+
+- [TempDB Contention: How to Identify and Resolve It](https://www.youtube.com/watch?v=ffgQWg3f76g) — Haripriya Naidu, DataMinds
+- [tempdb database guidance](https://learn.microsoft.com/en-us/sql/relational-databases/databases/tempdb-database?view=sql-server-ver16) — Microsoft Learn
+- [Diagnose and resolve latch contention](https://learn.microsoft.com/en-us/sql/relational-databases/diagnose-resolve-latch-contention?view=sql-server-ver17) — Microsoft Learn

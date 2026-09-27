@@ -3,6 +3,8 @@ import { withBasePath } from "@/lib/paths";
 export const metadata = {
   title: "About Ravi Sharma",
   description: "SQL Server and PostgreSQL specialist with more than 18 years of experience in database architecture and operations.",
+  alternates: { canonical: "/about/" },
+  openGraph: { title: "About Ravi Sharma | SQL Optima", description: "SQL Server and PostgreSQL specialist focused on database architecture, reliability, performance, and operations.", images: [{ url: "/images/about/ravi-sharma-sqloptima-v2.png", alt: "Ravi Sharma, SQL Optima maintainer" }] },
 };
 
 export default function AboutPage() {
