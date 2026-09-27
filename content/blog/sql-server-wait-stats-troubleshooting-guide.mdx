@@ -1,0 +1,130 @@
+---
+title: SQL Server Wait Statistics Troubleshooting Guide
+description: Download a production-oriented wait-stat script, collect a useful sample, interpret the output, and move from a wait category to the next piece of evidence.
+summary: A hands-on workflow for collecting and interpreting SQL Server wait statistics without treating one wait type as an automatic diagnosis.
+date: 2026-09-27
+published: true
+category: Performance
+---
+
+SQL Server wait statistics show where workers spend time when they cannot continue immediately. They are one of the fastest ways to narrow a broad complaint such as “the database is slow,” but they do not identify the root cause by themselves. A wait type is a direction for the next investigation.
+
+This guide uses the `top_server_waits.sql` diagnostic from the SQL Optima DBA script library. The companion `Analysis.sql` file in the source library is a written troubleshooting reference stored with a `.sql` extension; it is not an executable SQL script. The downloadable file below is the executable diagnostic.
+
+<div className="sql-download-panel">
+
+**Download the executable diagnostic**
+
+<DownloadLink href="/downloads/sql-server-diagnostics/top_server_waits.sql">Download top_server_waits.sql</DownloadLink>
+
+</div>
+
+## What the script returns
+
+The script reads `sys.dm_os_wait_stats`, filters a list of common idle and background waits, and returns the 25 largest remaining wait types. It does not clear wait statistics and does not modify database objects.
+
+| Output column | Meaning |
+| --- | --- |
+| `wait_type` | The resource or condition SQL Server workers waited for |
+| `WaitingTasks` | Number of completed waits accumulated for that type |
+| `TotalWaitSeconds` | Total elapsed wait time, including resource and signal time |
+| `ResourceWaitSeconds` | Time waiting for the resource to become available |
+| `SignalWaitSeconds` | Time runnable workers waited to receive CPU scheduler time |
+| `AvgWaitMs` | Average wait duration per completed wait |
+| `PercentOfTotal` | Share of the filtered wait time represented by the row |
+| `Recommendation` | A first investigation direction encoded in the script |
+
+The numbers are cumulative from the last SQL Server service start or the last explicit wait-stat reset. That makes the first result an instance history, not necessarily a picture of the incident happening now.
+
+## Permissions and safety
+
+Use a login with `VIEW SERVER STATE` on SQL Server 2019 and earlier. On versions that support more granular server-performance permissions, an administrator may choose the equivalent documented permission. Do not grant `sysadmin` merely to run a diagnostic.
+
+Before execution:
+
+1. Open the file and review the complete query.
+2. Confirm the SSMS or Azure Data Studio connection points to the intended instance.
+3. Record the instance name, SQL Server start time, sample time, and incident window.
+4. Prefer a read-only diagnostic login when your operating model supports one.
+5. Do not clear server wait statistics during an incident unless the team explicitly approves losing the cumulative baseline.
+
+The query reads a server DMV and returns one result set. Its cost is small, but every production script still deserves review and controlled execution.
+
+## Run the first sample
+
+Open `top_server_waits.sql` in SQL Server Management Studio, connect to the affected instance, and select **Execute**. Save the grid as CSV or copy it into the incident record.
+
+The initial result answers three useful questions:
+
+- Which non-idle waits dominate the instance history?
+- Are waits primarily resource time or signal time?
+- Does a wait occur frequently in small intervals or less often with a high average duration?
+
+Do not stop at the recommendation column. It is a routing hint. The same wait can have several causes, and the correct cause depends on the workload and time window.
+
+## Prefer a delta during the problem window
+
+For an active or repeatable issue, collect two samples around a defined interval and analyze the difference. A five-minute sample during the slowdown is often more useful than totals accumulated across several months.
+
+A safe workflow is:
+
+1. Run the script immediately before the problem window and save the result.
+2. Wait through a representative period without resetting the DMV.
+3. Run it again and save the second result.
+4. Subtract the first counters from the second for matching wait types.
+5. Rank the delta by wait time and compare it with application latency, throughput, and active queries from the same interval.
+
+If you automate deltas, retain the raw counters and timestamps. Counter resets, restarts, failovers, or instance changes can otherwise produce misleading negative or discontinuous values.
+
+## Read resource and signal time separately
+
+`TotalWaitSeconds` combines resource and signal time. Resource time means the worker could not continue because it waited for something such as a page read, log flush, lock, memory grant, or synchronization event. Signal time means the worker became runnable but waited for CPU scheduling.
+
+A high signal share can support a CPU pressure investigation, especially when runnable tasks, host CPU, scheduler pressure, and workload latency agree. It does not prove that more CPU is the answer. Excessive compilation, inefficient queries, spin activity, virtualization contention, or too much concurrency can all increase pressure.
+
+A high resource share points toward the category named by the leading waits. Continue with the corresponding query, storage, locking, memory, or HA evidence.
+
+## Common wait categories and the next check
+
+| Wait pattern | First interpretation | Evidence to collect next |
+| --- | --- | --- |
+| `PAGEIOLATCH_*` | Waiting for data pages to arrive from storage | File latency, physical reads, memory pressure, scan-heavy plans, missing or ineffective indexes |
+| `WRITELOG` | Waiting for transaction log flush | Log-file latency, transaction size, commit frequency, log throughput, synchronous replication overhead |
+| `LCK_M_*` | Lock wait | Head blocker, open transaction, statements, lock resource, isolation level, access order |
+| `RESOURCE_SEMAPHORE` | Waiting for query execution memory | Pending grants, large estimates, sort/hash operators, concurrency, memory configuration |
+| `SOS_SCHEDULER_YIELD` | Worker yielded while consuming CPU | High-CPU queries, plan quality, scheduler load, compilation, host CPU |
+| `CXPACKET` or `CXCONSUMER` | Parallel query coordination | Expensive parallel plans, skew between threads, row estimates, MAXDOP and cost threshold in context |
+| `PAGELATCH_*` | In-memory latch contention | TempDB allocation, hot pages, sequential-key inserts, allocation design |
+| `ASYNC_NETWORK_IO` | SQL Server waits for the client to consume rows | Large result sets, slow application processing, network behavior, row-by-row consumption |
+| `HADR_*` | Availability Group transport or synchronization activity | Replica state, send and redo queues, network, secondary storage, commit mode |
+
+Wait names are not remediation commands. For example, `PAGEIOLATCH` can reflect slow storage, but it can also reflect a query reading far more pages than necessary. Replacing storage without examining the query may hide rather than solve the problem.
+
+## A worked interpretation pattern
+
+Suppose `PAGEIOLATCH_SH` represents 42 percent of the delta, the average wait is elevated, and application latency increased during the same five-minute interval.
+
+The next investigation should connect three layers:
+
+1. **Storage:** review per-file read latency and operating-system storage telemetry.
+2. **Workload:** identify queries with the most physical and logical reads in the interval.
+3. **Plan:** inspect whether scans, poor estimates, spills, or missing access paths caused unnecessary I/O.
+
+If storage latency is normal but one query suddenly reads millions of pages, tune the workload. If query volume is normal but file latency rose sharply, investigate the storage path. If both changed, preserve the timeline and determine which event happened first.
+
+The same pattern applies to locking. `LCK_M_*` sends you to the blocking chain, transaction scope, and access order. The fix belongs to the cause, not to the label.
+
+## What not to do
+
+- Do not tune from cumulative lifetime totals without checking server start time.
+- Do not treat benign idle waits as workload problems.
+- Do not clear wait statistics merely to make the list easier to read.
+- Do not change MAXDOP, memory, indexes, or storage from one wait row.
+- Do not compare two servers without accounting for workload volume and observation duration.
+- Do not add percentages from samples collected with different filters.
+
+## Completion criteria
+
+A wait-stat investigation is complete when the incident window is clear, the leading wait category correlates with another independent signal, the responsible workload or resource has been identified, and a controlled change improves the measured outcome.
+
+After remediation, repeat the same sample method. Compare user latency, throughput, wait deltas, query metrics, and resource telemetry. A successful change reduces the observed problem without moving unacceptable pressure to another part of the system.

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const nav = [["Products", "/#products"], ["Solutions", "/#solutions"], ["Services", "/#services"], ["Handbook", "/handbook/"], ["Blog", "/blog/"], ["Docs", "/docs/"]] as const;
+const nav = [["Products", "/#products"], ["Solutions", "/#solutions"], ["Services", "/#services"], ["Handbook", "/handbook/"], ["Blog", "/blog/"], ["Docs", "/docs/"], ["About Me", "/about/"]] as const;
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const themeScript = `(function(){try{if(localStorage.getItem('sqloptima-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`;
