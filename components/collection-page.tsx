@@ -4,7 +4,8 @@ import { listContent } from "@/lib/content";
 import { withBasePath } from "@/lib/paths";
 
 function blogImage(slug: string) {
-  return `/images/blog/${slug}.${slug === "ai-assisted-sql-from-prompting-to-proof" ? "png" : "svg"}`;
+  const rasterImages = new Set(["ai-assisted-sql-from-prompting-to-proof", "sql-server-security-ransomware-resilient-backups"]);
+  return `/images/blog/${slug}.${rasterImages.has(slug) ? "png" : "svg"}`;
 }
 
 export function CollectionPage({ collection, title, intro, bannerImage }: { collection: Collection; title: string; intro: string; bannerImage?: string }) {
