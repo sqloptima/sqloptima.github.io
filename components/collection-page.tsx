@@ -4,8 +4,12 @@ import { listContent } from "@/lib/content";
 import { withBasePath } from "@/lib/paths";
 
 function blogImage(slug: string) {
-  const rasterImages = new Set(["ai-assisted-sql-from-prompting-to-proof", "sql-server-security-ransomware-resilient-backups"]);
-  return `/images/blog/${slug}.${rasterImages.has(slug) ? "png" : "svg"}`;
+  const imageExtensions: Record<string, "gif" | "png"> = {
+    "ai-assisted-sql-from-prompting-to-proof": "png",
+    "sql-server-security-ransomware-resilient-backups": "png",
+    "always-encrypted-sql-server-practical-guide": "gif",
+  };
+  return `/images/blog/${slug}.${imageExtensions[slug] ?? "svg"}`;
 }
 
 export function CollectionPage({ collection, title, intro, bannerImage }: { collection: Collection; title: string; intro: string; bannerImage?: string }) {
