@@ -165,6 +165,8 @@ Encrypt connections and validate the server certificate. `Encrypt=True;TrustServ
 
 TDE protects database and log files, `tempdb` once any database uses TDE, and eligible backups from offline theft. It does not stop a privileged query. Always Encrypted can keep selected values hidden from the Database Engine, but it brings driver, query, and key-management constraints. Dynamic Data Masking reduces accidental display; it is not an encryption boundary.
 
+If privileged database users should not be able to read selected columns, continue with [Always Encrypted in SQL Server: a practical guide](/blog/always-encrypted-sql-server-practical-guide/). It explains the client-side trust boundary, key hierarchy, encryption choices, secure enclaves, and a tested rollout path with working examples.
+
 <figure className="security-section-visual">
   <img src="/images/blog/security/data-protection-layers.svg" alt="SQL Server data protection controls for data in transit, in use, at rest, and in recovery copies" />
   <figcaption><strong>Match the control to the data state.</strong> TLS protects the wire, Always Encrypted protects selected values, TDE protects database files, and backup encryption protects recovery media.</figcaption>

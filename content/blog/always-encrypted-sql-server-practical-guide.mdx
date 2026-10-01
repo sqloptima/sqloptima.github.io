@@ -1,0 +1,350 @@
+---
+title: 'Always Encrypted in SQL Server: a practical guide'
+description: 'Learn how Always Encrypted keeps sensitive columns out of the database engine, how its keys and client driver work, and what to test before production.'
+summary: 'A plain-English, diagram-led guide to Always Encrypted with validated SQL, PowerShell, and C# examples.'
+date: 2026-10-01
+published: true
+category: Security & recovery
+subcategory: SQL Server
+---
+
+Always Encrypted is for a specific problem: the database must store sensitive values, but the people and systems that operate the database should not automatically be able to read them.
+
+The application driver encrypts selected values **before they reach SQL Server**. The server stores ciphertext. An approved application sees plaintext only after its driver obtains the key.
+
+<div className="ae-summary">
+  <div><strong>Protects</strong><span>Selected columns such as national ID numbers, card numbers, or salaries.</span></div>
+  <div><strong>Trusts</strong><span>The approved application, its driver, and the external key store.</span></div>
+  <div><strong>Costs</strong><span>Query flexibility, storage, testing effort, and key-store availability.</span></div>
+</div>
+
+<nav className="article-contents" aria-label="Article contents">
+  <strong>Contents</strong>
+  <ul>
+    <li><a href="#plain-english">The idea in plain English</a></li>
+    <li><a href="#flow">How a value moves</a></li>
+    <li><a href="#keys">The two-key design</a></li>
+    <li><a href="#build">Build a small example</a></li>
+    <li><a href="#choose">Choose the encryption type</a></li>
+    <li><a href="#limits">What changes or breaks</a></li>
+    <li><a href="#enclaves">Secure enclaves</a></li>
+    <li><a href="#rollout">A safe rollout</a></li>
+  </ul>
+</nav>
+
+<h2 id="plain-english">The idea in plain English</h2>
+
+Imagine a locked envelope moving through a mailroom. The mailroom can store it, route it, and return it, but it cannot open it. The sender and approved recipient hold the key.
+
+SQL Server is the mailroom. An Always Encrypted-aware client driver seals and opens the envelope. The key lives outside the database system.
+
+Without an enabled driver, a query returns encrypted bytes:
+
+<div className="ae-code-compact">
+
+```sql
+-- This connection does not include Column Encryption Setting=enabled.
+SELECT SSN, Salary
+FROM HR.Employees;
+```
+
+</div>
+
+With an approved client, the same query can return readable values. The difference is not the query text. It is whether the client is allowed to reach the key store.
+
+<div className="ae-note"><strong>What this does not solve:</strong> an attacker who controls the approved application can see values after the driver decrypts them. Always Encrypted reduces trust in the database tier; it does not replace application security, least privilege, auditing, or safe backups.</div>
+
+### How it differs from other controls
+
+| Control | What it does | Can a privileged query read the value? |
+| --- | --- | --- |
+| <Acronym title="Transparent Data Encryption" href="https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/transparent-data-encryption">TDE</Acronym> | Encrypts database and log files at rest | Yes |
+| <Acronym title="Dynamic Data Masking" href="https://learn.microsoft.com/en-us/sql/relational-databases/security/dynamic-data-masking">DDM</Acronym> | Changes how some results are displayed | Yes; it is not encryption |
+| Always Encrypted | Encrypts selected values at the client boundary | Not without key-store access |
+| Always Encrypted with secure enclaves | Allows richer work in protected server memory | Only inside the enclave during approved operations |
+
+Use <Acronym title="Transparent Data Encryption" href="https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/transparent-data-encryption">TDE</Acronym> and Always Encrypted together when both risks matter: TDE protects files from offline theft, while Always Encrypted protects selected values from the database tier.
+
+<h2 id="flow">How one value moves through the system</h2>
+
+<figure className="ae-diagram">
+  <img src="/images/blog/always-encrypted/client-encryption-flow.svg" alt="An application sends a parameter to a client driver, which gets key access, encrypts the value, and sends ciphertext to SQL Server" />
+  <figcaption><strong>The client driver is the trust boundary.</strong> Plaintext exists in the approved application, not in the normal SQL Server execution path.</figcaption>
+</figure>
+
+For a parameterized `INSERT`, the flow is:
+
+1. The application sends the statement and parameters through a supported driver.
+2. The driver asks SQL Server which parameters target encrypted columns.
+3. SQL Server returns encryption metadata and an encrypted copy of the data key.
+4. The driver uses the application identity to ask the external key store to unwrap that key.
+5. The driver encrypts the parameter and sends ciphertext to SQL Server.
+6. SQL Server stores ciphertext. On a later `SELECT`, the driver decrypts the result for the application.
+
+SQL Server knows the schema and key locations, but it does not store the keys in plaintext.
+
+<h2 id="keys">The two-key design</h2>
+
+Always Encrypted uses envelope encryption: one key protects the data and another key protects that key.
+
+<figure className="ae-diagram">
+  <img src="/images/blog/always-encrypted/key-hierarchy.svg" alt="A column master key in an external store wraps a column encryption key whose encrypted copy is stored in the database and protects column values" />
+  <figcaption>The external master key never belongs in the database. SQL Server stores only its location and the wrapped data key.</figcaption>
+</figure>
+
+- The <Acronym title="Column Master Key" href="https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/overview-of-key-management-for-always-encrypted">CMK</Acronym> protects other keys. Keep it in Azure Key Vault, a Windows certificate store, or a supported hardware security module. The database stores metadata that points to it.
+- The <Acronym title="Column Encryption Key" href="https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/overview-of-key-management-for-always-encrypted">CEK</Acronym> encrypts column values. SQL Server stores only a wrapped copy of it.
+
+Column values use `AEAD_AES_256_CBC_HMAC_SHA_256`. The name describes authenticated encryption built from <Acronym title="Advanced Encryption Standard" href="https://csrc.nist.gov/pubs/fips/197/final">AES</Acronym>, <Acronym title="Cipher Block Chaining" href="https://csrc.nist.gov/publications/detail/sp/800-38a/final">CBC</Acronym>, and a <Acronym title="Hash-based Message Authentication Code" href="https://csrc.nist.gov/pubs/fips/198-1/final">HMAC</Acronym>. Microsoft documents that Always Encrypted uses FIPS 140-2 validated cryptographic modules.
+
+Encryption adds storage overhead. A four-byte `int`, for example, becomes 65 encrypted bytes. Measure row width, indexes, memory grants, and network traffic with realistic data.
+
+<h2 id="build">Build a small example</h2>
+
+Use a development database and test key store first. Do not copy production secrets into a lab or run key-provisioning tools on the SQL Server host.
+
+### 1. Create the key metadata and table
+
+This <Acronym title="Transact-SQL" href="https://learn.microsoft.com/en-us/sql/t-sql/language-reference">T-SQL</Acronym> is a template. The key path and encrypted value are placeholders; create the real wrapped value with SQL Server Management Studio or the SqlServer PowerShell module.
+
+```sql
+CREATE SCHEMA HR;
+GO
+
+CREATE COLUMN MASTER KEY [CMK_HR]
+WITH
+(
+    KEY_STORE_PROVIDER_NAME = 'AZURE_KEY_VAULT',
+    KEY_PATH = 'https://your-vault.vault.azure.net/keys/hr-cmk/key-version'
+);
+GO
+
+CREATE COLUMN ENCRYPTION KEY [CEK_HR]
+WITH VALUES
+(
+    COLUMN_MASTER_KEY = [CMK_HR],
+    ALGORITHM = 'RSA_OAEP',
+    ENCRYPTED_VALUE = 0x... -- generated outside SQL Server
+);
+GO
+
+CREATE TABLE HR.Employees
+(
+    EmployeeID int IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_HR_Employees PRIMARY KEY,
+    SSN char(11) COLLATE Latin1_General_BIN2 NOT NULL
+        ENCRYPTED WITH
+        (
+            COLUMN_ENCRYPTION_KEY = CEK_HR,
+            ENCRYPTION_TYPE = DETERMINISTIC,
+            ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256'
+        ),
+    FirstName nvarchar(50) NOT NULL,
+    LastName nvarchar(50) NOT NULL,
+    Salary money NOT NULL
+        ENCRYPTED WITH
+        (
+            COLUMN_ENCRYPTION_KEY = CEK_HR,
+            ENCRYPTION_TYPE = RANDOMIZED,
+            ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256'
+        )
+);
+GO
+```
+
+<p className="ae-run-warning">Review every placeholder. Encrypted character columns require a supported binary-code-point collation, and Microsoft states that it must not differ from the database default collation.</p>
+
+The <Acronym title="Social Security Number" href="https://www.ssa.gov/personal-record/when-you-need-social-security-number">SSN</Acronym> is deterministic because this example needs exact lookups. `Salary` is randomized because it does not need to be searched without an enclave.
+
+### 2. Provision through supported tooling
+
+Microsoft's Encrypt Columns wizard in <Acronym title="SQL Server Management Studio" href="https://learn.microsoft.com/en-us/ssms/sql-server-management-studio-ssms">SSMS</Acronym> is the easiest learning path. For automation, use the SqlServer PowerShell module from a secure administration workstation. This pattern assumes the vault and key already exist and the operator has the required permissions:
+
+```powershell
+Import-Module Az.Accounts, SqlServer -ErrorAction Stop
+Connect-AzAccount | Out-Null
+
+$vaultToken = (Get-AzAccessToken -ResourceUrl 'https://vault.azure.net').Token
+$database = Get-SqlDatabase -ConnectionString $connectionString -Encrypt Mandatory
+
+$cmkSettings = New-SqlAzureKeyVaultColumnMasterKeySettings `
+    -KeyURL 'https://your-vault.vault.azure.net/keys/hr-cmk/key-version'
+
+New-SqlColumnMasterKey -Name 'CMK_HR' -InputObject $database `
+    -ColumnMasterKeySettings $cmkSettings
+
+New-SqlColumnEncryptionKey -Name 'CEK_HR' -InputObject $database `
+    -ColumnMasterKey 'CMK_HR' -KeyVaultAccessToken $vaultToken
+
+$settings = @(
+    New-SqlColumnEncryptionSettings -ColumnName 'HR.Employees.SSN' `
+        -EncryptionType 'Deterministic' -EncryptionKey 'CEK_HR'
+    New-SqlColumnEncryptionSettings -ColumnName 'HR.Employees.Salary' `
+        -EncryptionType 'Randomized' -EncryptionKey 'CEK_HR'
+)
+
+Set-SqlColumnEncryption -InputObject $database `
+    -ColumnEncryptionSettings $settings -KeyVaultAccessToken $vaultToken `
+    -LogFileDirectory '.'
+```
+
+<p className="ae-run-warning">For existing data, this can read, encrypt, and rewrite the column through the client. Test duration, locking, log growth, retry behavior, and rollback before production.</p>
+
+### 3. Enable the application driver
+
+For `Microsoft.Data.SqlClient`, add `Column Encryption Setting=enabled` and register the Azure Key Vault provider. Use a managed identity or another approved credential in production.
+
+```csharp
+using Azure.Identity;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider;
+
+var provider = new SqlColumnEncryptionAzureKeyVaultProvider(
+    new DefaultAzureCredential());
+
+SqlConnection.RegisterColumnEncryptionKeyStoreProviders(
+    new Dictionary<string, SqlColumnEncryptionKeyStoreProvider>
+    {
+        [SqlColumnEncryptionAzureKeyVaultProvider.ProviderName] = provider
+    });
+
+var connectionString =
+    "Server=sql01;Database=ContosoHR;Integrated Security=true;" +
+    "Encrypt=true;Column Encryption Setting=enabled;";
+```
+
+Always use parameters, and make their type, length, precision, and scale match the encrypted column exactly.
+
+<div className="ae-code-compact">
+
+```csharp
+using var command = new SqlCommand(
+    "SELECT EmployeeID, SSN FROM HR.Employees WHERE SSN = @SSN",
+    connection);
+
+command.Parameters.Add("@SSN", SqlDbType.Char, 11).Value = "987-65-4320";
+using var reader = await command.ExecuteReaderAsync();
+```
+
+</div>
+
+A literal such as `WHERE SSN = '987-65-4320'` does not work. The driver needs a parameter so it can discover the encryption metadata and encrypt the value before sending it.
+
+When testing variables in <Acronym title="SQL Server Management Studio" href="https://learn.microsoft.com/en-us/ssms/sql-server-management-studio-ssms">SSMS</Acronym>, enable **Parameterization for Always Encrypted**, then use a variable:
+
+<div className="ae-code-compact">
+
+```sql
+DECLARE @SSN char(11) = '987-65-4320';
+
+SELECT EmployeeID, SSN, Salary
+FROM HR.Employees
+WHERE SSN = @SSN;
+```
+
+</div>
+
+### 4. Inventory encrypted columns and key locations
+
+```sql
+SELECT
+    SCHEMA_NAME(t.schema_id) AS schema_name,
+    t.name AS table_name,
+    c.name AS column_name,
+    c.encryption_type_desc,
+    cek.name AS column_encryption_key,
+    cmk.name AS column_master_key,
+    cmk.key_store_provider_name,
+    cmk.key_path
+FROM sys.columns AS c
+JOIN sys.tables AS t ON t.object_id = c.object_id
+JOIN sys.column_encryption_keys AS cek
+  ON cek.column_encryption_key_id = c.column_encryption_key_id
+OUTER APPLY
+(
+    SELECT TOP (1) mk.name, mk.key_store_provider_name, mk.key_path
+    FROM sys.column_encryption_key_values AS cekv
+    JOIN sys.column_master_keys AS mk
+      ON mk.column_master_key_id = cekv.column_master_key_id
+    WHERE cekv.column_encryption_key_id = cek.column_encryption_key_id
+    ORDER BY mk.name
+) AS cmk
+WHERE c.encryption_type IS NOT NULL
+ORDER BY schema_name, table_name, column_name;
+```
+
+This exposes metadata and key locations, not plaintext keys.
+
+<h2 id="choose">Choose deterministic or randomized</h2>
+
+<div className="ae-choice">
+  <div><h3>Deterministic</h3><p>The same input produces the same ciphertext.</p><p><strong>Use it for:</strong> exact lookup, equality joins, grouping, and indexing.</p><p><strong>Trade-off:</strong> repeated values reveal equality patterns. Avoid it for small sets such as yes/no, region, or status.</p></div>
+  <div><h3>Randomized</h3><p>The same input normally produces different ciphertext each time.</p><p><strong>Use it for:</strong> values that only need to be stored and returned.</p><p><strong>Trade-off:</strong> without a secure enclave, SQL Server cannot search, join, group, or index the value.</p></div>
+</div>
+
+Choose from real query patterns, not from the label that sounds safest. Changing the encryption type later means re-encrypting the column.
+
+<figure className="ae-diagram">
+  <img src="/images/blog/always-encrypted/encryption-choice.svg" alt="Decision flow choosing randomized encryption for storage, deterministic for exact equality, or randomized with a secure enclave for richer comparisons" />
+  <figcaption>Start with the operation the application needs. A small proof with representative queries is more useful than encrypting twenty columns at once.</figcaption>
+</figure>
+
+<h2 id="limits">What changes or breaks</h2>
+
+Always Encrypted is an application and schema project, not a transparent database switch.
+
+- Without enclaves, randomized columns cannot participate in server-side comparisons. Deterministic columns support equality operations, not ranges or pattern matching.
+- Values that touch encrypted columns must be parameters. Mixing plaintext literals with encrypted values causes an operand type clash.
+- `FOR XML`, `FOR JSON`, table-valued parameters targeting encrypted columns, and several data types are unsupported.
+- Encrypted columns cannot use features such as full-text search, sparse columns, default constraints, Dynamic Data Masking, or Change Data Capture.
+- Randomized columns cannot be ordinary index keys, primary keys, unique keys, or foreign-key participants without the enclave-specific capabilities and limits Microsoft documents.
+- Transactional, merge, and snapshot replication do not work on encrypted columns. Physical replication such as Always On availability groups is supported.
+- Distributed queries through linked servers and cross-database joins over encrypted columns are restricted.
+
+Read the current Microsoft limitations list before designing the schema; product capabilities change over time.
+
+### Operational costs
+
+- **Key-store availability becomes application availability.** Warm driver caches help, but cold starts and key rotation still need the external store.
+- **Ciphertext is wider.** Expect more storage and network traffic, and test indexes and memory grants.
+- **Client CPU rises.** Encryption and decryption happen in the driver.
+- **Every tool needs protocol support.** Reporting, export, <Acronym title="Extract, Transform, Load" href="https://learn.microsoft.com/en-us/azure/architecture/data-guide/relational-data/etl">ETL</Acronym>, and support tools without an enabled driver see ciphertext or fail.
+- **Type matching is strict.** `char` versus `nchar`, length, precision, scale, and `date` versus `datetime` mistakes often surface only after encryption.
+
+Database permissions to view <Acronym title="Column Master Key" href="https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/overview-of-key-management-for-always-encrypted">CMK</Acronym> and <Acronym title="Column Encryption Key" href="https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/overview-of-key-management-for-always-encrypted">CEK</Acronym> metadata do not grant key-store access. On SQL Server, `public` receives both metadata-view permissions by default; Azure SQL Database differs. Review those grants, then keep key-store access with the approved application or security role.
+
+Rotating a CMK can be relatively light because it rewraps the CEK. Rotating the CEK or changing encryption type re-encrypts data and needs a production change plan.
+
+<h2 id="enclaves">Where secure enclaves help</h2>
+
+A secure enclave is a protected memory region inside the database engine process. An approved client can release a key to that region, where SQL Server performs an allowed operation on plaintext without exposing it to the rest of the engine.
+
+For enclave-enabled randomized columns, SQL Server 2022 and Azure SQL Database can support comparisons, `BETWEEN`, `IN`, `LIKE`, `DISTINCT`, joins, sorting, grouping, and nonclustered indexes, subject to documented requirements. SQL Server 2019 has a smaller feature set: joins are limited to nested loops, and `ORDER BY` and `GROUP BY` are not supported. Rich queries require randomized encryption, and SQL Server 2022 needs database compatibility level 160 or later.
+
+Enclaves also allow in-place encryption, decryption, and key rotation. They improve usability, but add deployment, attestation, high-availability, and threat-model decisions. Do not add them only to avoid fixing one query.
+
+<h2 id="rollout">A safe rollout</h2>
+
+1. Pick one searchable column and one non-searchable column in a restored copy of production.
+2. List every read, write, join, export, report, and support tool that touches them.
+3. Choose the key store and separate database, application, and key-administration roles.
+4. Test drivers and exact parameter types before changing the schema.
+5. Measure encryption duration, log growth, row width, latency, and cold key-store access.
+6. Block key-store access and confirm the alert, application error, and recovery steps.
+7. Rehearse key rotation and application credential rotation.
+8. Roll out in small batches, with a tested rollback and verified backup.
+
+<div className="ae-next"><p><strong>The practical rule:</strong> map the queries first, choose the encryption type second, and encrypt third.</p><p>Always Encrypted is strongest when it protects a small set of truly sensitive columns and the key store belongs to a different trust boundary from the database.</p></div>
+
+<h2 id="further-reading">Further reading</h2>
+
+- [Always Encrypted overview and limitations — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-database-engine?view=sql-server-ver17)
+- [Always Encrypted with secure enclaves — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-enclaves?view=sql-server-ver17)
+- [Always Encrypted cryptography and ciphertext size — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-cryptography?view=sql-server-ver17)
+- [Develop applications with Always Encrypted — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-client-development?view=sql-server-ver17)
+- [Use Always Encrypted with Microsoft.Data.SqlClient — Microsoft Learn](https://learn.microsoft.com/en-us/sql/connect/ado-net/sql/sqlclient-support-always-encrypted?view=sql-server-ver17)
+- [Configure Always Encrypted with PowerShell — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/configure-always-encrypted-using-powershell?view=sql-server-ver17)
+- [Always Encrypted key management — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/overview-of-key-management-for-always-encrypted?view=sql-server-ver17)
+- [Getting started tutorial — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-tutorial-getting-started?view=sql-server-ver17)
+
+Last reviewed: 1 October 2026. Validate the exact SQL Server version, database compatibility level, client driver, key-store provider, and enclave technology in a non-production environment before deployment.
