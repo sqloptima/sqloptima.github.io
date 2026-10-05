@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" role="img" aria-labelledby="t d">
+  <title id="t">Target hardened database architecture</title>
+  <desc id="d">Users through edge and app controls; admins through PAM; database private; keys external; recovery and audit independent.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#eaf7ff"/></linearGradient>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7eb8d8"/></marker>
+  </defs>
+  <rect width="1200" height="680" fill="url(#bg)"/>
+  <text x="600" y="38" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="26" font-weight="700">TARGET ARCHITECTURE</text>
+  <text x="600" y="64" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="15">Private database, separate admin path, external keys, independent recovery and evidence</text>
+
+  <g font-family="Segoe UI,Arial">
+    <!-- Row 1: user path -->
+    <rect x="40" y="100" width="200" height="70" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+    <text x="140" y="130" text-anchor="middle" fill="#14324b" font-size="15" font-weight="700">Users / apps</text>
+    <text x="140" y="152" text-anchor="middle" fill="#4a6a82" font-size="13">business traffic only</text>
+
+    <rect x="320" y="100" width="240" height="70" rx="14" fill="#123c61" stroke="#59c3ff"/>
+    <text x="440" y="130" text-anchor="middle" fill="#e9f6fd" font-size="15" font-weight="700">DDoS + WAF + API GW</text>
+    <text x="440" y="152" text-anchor="middle" fill="#8fc8e8" font-size="13">edge controls</text>
+
+    <rect x="640" y="100" width="240" height="70" rx="14" fill="#164b48" stroke="#62e0b4"/>
+    <text x="760" y="130" text-anchor="middle" fill="#bdf4df" font-size="15" font-weight="700">App authorization</text>
+    <text x="760" y="152" text-anchor="middle" fill="#6ee7bd" font-size="13">parameterized access</text>
+
+    <rect x="960" y="100" width="200" height="70" rx="14" fill="#0a223c" stroke="#67e8f9" stroke-width="3"/>
+    <text x="1060" y="130" text-anchor="middle" fill="#67e8f9" font-size="15" font-weight="700">DATABASE</text>
+    <text x="1060" y="152" text-anchor="middle" fill="#8fc8e8" font-size="13">private listener</text>
+
+    <!-- Row 2: admin path -->
+    <rect x="40" y="240" width="240" height="70" rx="14" fill="#fff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="160" y="270" text-anchor="middle" fill="#5b21b6" font-size="15" font-weight="700">Managed admin devices</text>
+    <text x="160" y="292" text-anchor="middle" fill="#6d28d9" font-size="13">jump boxes + EDR</text>
+
+    <rect x="360" y="240" width="280" height="70" rx="14" fill="#24355f" stroke="#b69cff"/>
+    <text x="500" y="270" text-anchor="middle" fill="#c7b6ff" font-size="15" font-weight="700">IAM + PAM</text>
+    <text x="500" y="292" text-anchor="middle" fill="#e6e0f7" font-size="13">phishing-resistant, recorded</text>
+
+    <rect x="720" y="240" width="200" height="70" rx="14" fill="#45361b" stroke="#fbbf24"/>
+    <text x="820" y="270" text-anchor="middle" fill="#fcd34d" font-size="15" font-weight="700">External key / HSM</text>
+    <text x="820" y="292" text-anchor="middle" fill="#fce6ad" font-size="13">outside DB host</text>
+
+    <!-- Row 3: outcomes -->
+    <rect x="80" y="400" width="300" height="80" rx="16" fill="#fff" stroke="#34d399" stroke-width="2"/>
+    <text x="230" y="435" text-anchor="middle" fill="#065f46" font-size="16" font-weight="700">Separate recovery</text>
+    <text x="230" y="460" text-anchor="middle" fill="#047857" font-size="13">WORM + offline + distinct admins</text>
+
+    <rect x="450" y="400" width="300" height="80" rx="16" fill="#fff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="600" y="435" text-anchor="middle" fill="#0c4a6e" font-size="16" font-weight="700">Independent evidence</text>
+    <text x="600" y="460" text-anchor="middle" fill="#0369a1" font-size="13">off-host audit + heartbeat</text>
+
+    <rect x="820" y="400" width="300" height="80" rx="16" fill="#123c61" stroke="#59c3ff"/>
+    <text x="970" y="435" text-anchor="middle" fill="#67e8f9" font-size="16" font-weight="700">SOC use-cases</text>
+    <text x="970" y="460" text-anchor="middle" fill="#8fc8e8" font-size="13">export, privilege, retention</text>
+
+    <rect x="120" y="540" width="960" height="90" rx="16" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+    <text x="600" y="575" text-anchor="middle" fill="#12638a" font-size="16" font-weight="700">PROCUREMENT RULE</text>
+    <text x="600" y="602" text-anchor="middle" fill="#4a6a82" font-size="14">Pass residency, restore proof, key recovery, and no shared default admins before feature scoring</text>
+  </g>
+
+  <!-- Connectors: drawn around boxes, never through them -->
+  <g stroke="#7eb8d8" stroke-width="2.5" fill="none" marker-end="url(#arr)">
+    <path d="M240 135H312"/>
+    <path d="M560 135H632"/>
+    <path d="M880 135H952"/>
+    <path d="M280 275H352"/>
+    <path d="M640 275H712"/>
+    <path d="M920 275H1000"/>
+    <path d="M1060 170V392"/>
+    <path d="M820 310V360H970V392"/>
+    <path d="M160 310V360H230V392"/>
+    <path d="M500 310V360H600V392"/>
+  </g>
+  <g fill="#94a3b8" font-family="Segoe UI,Arial" font-size="12">
+    <text x="290" y="95" text-anchor="middle">user path</text>
+    <text x="450" y="225" text-anchor="middle">admin path (separate)</text>
+  </g>
+</svg>

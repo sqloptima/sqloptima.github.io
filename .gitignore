@@ -1,6 +1,7 @@
 node_modules/
 .next/
 out/
+backups/
 public/search-index.json
 *.tsbuildinfo
 .env*

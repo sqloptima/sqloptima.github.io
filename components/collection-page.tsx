@@ -4,10 +4,11 @@ import { listContent } from "@/lib/content";
 import { withBasePath } from "@/lib/paths";
 
 function blogImage(slug: string) {
-  const imageExtensions: Record<string, "gif" | "png"> = {
+  const imageExtensions: Record<string, "gif" | "png" | "jpg"> = {
     "ai-assisted-sql-from-prompting-to-proof": "png",
     "sql-server-security-ransomware-resilient-backups": "png",
     "always-encrypted-sql-server-practical-guide": "gif",
+    "database-attack-surface-defense-practical-guide": "jpg",
   };
   return `/images/blog/${slug}.${imageExtensions[slug] ?? "svg"}`;
 }

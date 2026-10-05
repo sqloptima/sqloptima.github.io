@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="t d">
+  <title id="t">Issues with the current database estate</title>
+  <desc id="d">Eight common estate weaknesses with icons and short impact notes.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#eaf7ff"/></linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <text x="600" y="38" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="26" font-weight="700">ISSUES WITH THE CURRENT STATE</text>
+  <text x="600" y="64" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="15">A clean audit form can still lose data through an ordinary authenticated export</text>
+
+  <g font-family="Segoe UI,Arial">
+    <g transform="translate(40 90)">
+      <rect width="270" height="180" rx="14" fill="#fff" stroke="#f87171" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#fee2e2"/><path d="M40 28v10M32 48h16" stroke="#991b1b" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="74" y="36" fill="#991b1b" font-size="14" font-weight="700">Public listeners</text>
+      <text x="74" y="56" fill="#b91c1c" font-size="12">over-exposed ports</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">Attackers reach the door</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">without owning the whole</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">network first.</text>
+    </g>
+    <g transform="translate(330 90)">
+      <rect width="270" height="180" rx="14" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#ffedd5"/><circle cx="40" cy="36" r="8" fill="none" stroke="#92400e" stroke-width="2"/><path d="M28 52c4-8 20-8 24 0" fill="none" stroke="#92400e" stroke-width="2"/>
+      <text x="74" y="36" fill="#92400e" font-size="14" font-weight="700">Shared DBA / sa</text>
+      <text x="74" y="56" fill="#b45309" font-size="12">one stolen secret</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">One password equals</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">full authority over data,</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">jobs, and often backups.</text>
+    </g>
+    <g transform="translate(620 90)">
+      <rect width="270" height="180" rx="14" fill="#fff" stroke="#a78bfa" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#ede9fe"/><rect x="30" y="30" width="20" height="20" rx="3" fill="none" stroke="#5b21b6" stroke-width="2"/><path d="M34 38h12M34 44h8" stroke="#5b21b6" stroke-width="2"/>
+      <text x="74" y="36" fill="#5b21b6" font-size="14" font-weight="700">App can SELECT all</text>
+      <text x="74" y="56" fill="#6d28d9" font-size="12">dbo-lite roles</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">Injection or token theft</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">becomes a full dump of</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">sensitive tables.</text>
+    </g>
+    <g transform="translate(910 90)">
+      <rect width="250" height="180" rx="14" fill="#fff" stroke="#38bdf8" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#e0f2fe"/><rect x="30" y="28" width="12" height="16" rx="2" fill="none" stroke="#0c4a6e" stroke-width="2"/><rect x="40" y="34" width="12" height="16" rx="2" fill="none" stroke="#0c4a6e" stroke-width="2"/>
+      <text x="74" y="36" fill="#0c4a6e" font-size="14" font-weight="700">Untracked copies</text>
+      <text x="74" y="56" fill="#0369a1" font-size="12">dumps and BI extracts</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">Laptop dumps, CI fixtures,</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">support tickets, and sync</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">jobs leave the boundary.</text>
+    </g>
+
+    <g transform="translate(40 300)">
+      <rect width="270" height="180" rx="14" fill="#fff" stroke="#fbbf24" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#fef3c7"/><path d="M30 46h20v-12h-20z" fill="none" stroke="#92400e" stroke-width="2"/><path d="M34 34v-4h12v4" stroke="#92400e" stroke-width="2"/>
+      <text x="74" y="36" fill="#92400e" font-size="14" font-weight="700">Backup = prod admin</text>
+      <text x="74" y="56" fill="#b45309" font-size="12">shared recovery fate</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">Ransomware can disable</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">recovery with the same</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">credential that runs prod.</text>
+    </g>
+    <g transform="translate(330 300)">
+      <rect width="270" height="180" rx="14" fill="#fff" stroke="#34d399" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#d1fae5"/><circle cx="40" cy="40" r="10" fill="none" stroke="#065f46" stroke-width="2"/><path d="M40 30v10l6 4" stroke="#065f46" stroke-width="2"/>
+      <text x="74" y="36" fill="#065f46" font-size="14" font-weight="700">BYOK marketing</text>
+      <text x="74" y="56" fill="#047857" font-size="12">keys still decrypt in KMS</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">Keys inside a provider KMS</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">still unwrap for authorized</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">services during processing.</text>
+    </g>
+    <g transform="translate(620 300)">
+      <rect width="270" height="180" rx="14" fill="#fff" stroke="#22c55e" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#dcfce7"/><path d="M30 40l6 6 14-14" fill="none" stroke="#166534" stroke-width="2.5"/>
+      <text x="74" y="36" fill="#166534" font-size="14" font-weight="700">Green backup jobs</text>
+      <text x="74" y="56" fill="#15803d" font-size="12">schedules != restore</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">Jobs succeed while restores</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">fail: wrong tools, missing</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">logs, or lost keys.</text>
+    </g>
+    <g transform="translate(910 300)">
+      <rect width="250" height="180" rx="14" fill="#fff" stroke="#64748b" stroke-width="2"/>
+      <circle cx="40" cy="40" r="22" fill="#f1f5f9"/><ellipse cx="40" cy="34" rx="10" ry="4" fill="none" stroke="#334155" stroke-width="2"/><path d="M30 34v10c0 3 4 5 10 5s10-2 10-5V34" fill="none" stroke="#334155" stroke-width="2"/>
+      <text x="74" y="36" fill="#334155" font-size="14" font-weight="700">Replica-only DR</text>
+      <text x="74" y="56" fill="#475569" font-size="12">HA is not DR truth</text>
+      <text x="20" y="100" fill="#31475a" font-size="14">Standbys copy malicious</text>
+      <text x="20" y="122" fill="#31475a" font-size="14">writes as faithfully as</text>
+      <text x="20" y="144" fill="#31475a" font-size="14">legitimate ones.</text>
+    </g>
+
+    <rect x="40" y="520" width="1120" height="150" rx="16" fill="#0a223c" stroke="#67e8f9" stroke-width="2"/>
+    <text x="600" y="575" text-anchor="middle" fill="#67e8f9" font-size="18" font-weight="700">Hard truth</text>
+    <text x="600" y="610" text-anchor="middle" fill="#e9f6fd" font-size="15">Passing an ISO questionnaire does not stop an ordinary authenticated export</text>
+    <text x="600" y="640" text-anchor="middle" fill="#8fc8e8" font-size="14">of citizen or customer data</text>
+  </g>
+</svg>

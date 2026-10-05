@@ -7,10 +7,11 @@ import path from "node:path";
 import { getBlogScript } from "@/lib/blog-scripts";
 export const dynamicParams = false;
 export function generateStaticParams(){return listContent("blog").map(({slug})=>({slug}))}
-const blogImageExtensions:Record<string,"gif"|"png">={
+const blogImageExtensions:Record<string,"gif"|"png"|"jpg">={
   "ai-assisted-sql-from-prompting-to-proof":"png",
   "sql-server-security-ransomware-resilient-backups":"png",
   "always-encrypted-sql-server-practical-guide":"gif",
+  "database-attack-surface-defense-practical-guide":"jpg",
 };
 const blogImage=(slug:string)=>`/images/blog/${slug}.${blogImageExtensions[slug]??"svg"}`;
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{const {slug}=await params;const item=getContent("blog",slug);return item?{title:item.title,description:item.description,alternates:{canonical:`/blog/${slug}/`},openGraph:{images:[blogImage(slug)]}}:{title:"Article not found"}}

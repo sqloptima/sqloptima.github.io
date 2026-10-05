@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" role="img" aria-labelledby="t d">
+  <title id="t">Database estate risk scorecard</title>
+  <desc id="d">Weak versus stronger signals across identity, network, authorization, crypto, copies, recovery, detection, and supply chain.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#eaf7ff"/></linearGradient>
+  </defs>
+  <rect width="1200" height="500" fill="url(#bg)"/>
+  <text x="600" y="42" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="26" font-weight="700">RISK FACTORS - HOW WEAK IS THE SYSTEM?</text>
+  <text x="600" y="72" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="15">Score the estate - not a single CVSS number</text>
+
+  <g font-family="Segoe UI,Arial">
+    <rect x="40" y="100" width="540" height="50" rx="12" fill="#fee2e2" stroke="#f87171"/>
+    <text x="310" y="132" text-anchor="middle" fill="#991b1b" font-size="16" font-weight="700">WEAK SIGNAL</text>
+    <rect x="620" y="100" width="540" height="50" rx="12" fill="#d1fae5" stroke="#34d399"/>
+    <text x="890" y="132" text-anchor="middle" fill="#065f46" font-size="16" font-weight="700">STRONGER SIGNAL</text>
+
+    <text x="40" y="190" fill="#12638a" font-size="14" font-weight="700">Identity</text>
+    <text x="180" y="190" fill="#31475a" font-size="14">Password-only  |  shared logins</text>
+    <text x="700" y="190" fill="#31475a" font-size="14">Phishing-resistant MFA  |  named admins</text>
+
+    <text x="40" y="230" fill="#12638a" font-size="14" font-weight="700">Network</text>
+    <text x="180" y="230" fill="#31475a" font-size="14">DB on Internet or flat LAN</text>
+    <text x="700" y="230" fill="#31475a" font-size="14">Private listener  |  microsegmentation</text>
+
+    <text x="40" y="270" fill="#12638a" font-size="14" font-weight="700">Authorization</text>
+    <text x="180" y="270" fill="#31475a" font-size="14">App user = dbo-lite</text>
+    <text x="700" y="270" fill="#31475a" font-size="14">Least privilege  |  separate export role</text>
+
+    <text x="40" y="310" fill="#12638a" font-size="14" font-weight="700">Crypto</text>
+    <text x="180" y="310" fill="#31475a" font-size="14">TDE only</text>
+    <text x="700" y="310" fill="#31475a" font-size="14">TDE + column/client encryption</text>
+
+    <text x="40" y="350" fill="#12638a" font-size="14" font-weight="700">Recovery</text>
+    <text x="180" y="350" fill="#31475a" font-size="14">Same IdP for prod and backup</text>
+    <text x="700" y="350" fill="#31475a" font-size="14">Separate plane  |  WORM  |  tested restore</text>
+
+    <rect x="40" y="390" width="1120" height="70" rx="16" fill="#0a223c" stroke="#67e8f9" stroke-width="2"/>
+    <text x="600" y="422" text-anchor="middle" fill="#67e8f9" font-size="16" font-weight="700">Prioritize by sensitivity, privilege reach, and recovery dependencies</text>
+    <text x="600" y="446" text-anchor="middle" fill="#8fc8e8" font-size="13">One serious gap can outweigh several minor ones - not a breach probability score</text>
+  </g>
+</svg>

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" role="img" aria-labelledby="t d">
+  <title id="t">Nepal data estate reality check</title>
+  <desc id="d">Three panels with icons: on paper, often missing, and five sovereignty questions.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#e8f4ff"/></linearGradient>
+  </defs>
+  <rect width="1200" height="600" fill="url(#bg)"/>
+  <text x="600" y="40" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="24" font-weight="700">NEPAL / REGULATED ESTATES: PAPER VS PROOF</text>
+  <text x="600" y="68" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="15">Local hosting helps. It does not by itself prove who can export or delete recovery.</text>
+
+  <g font-family="Segoe UI,Arial">
+    <!-- ON PAPER -->
+    <g transform="translate(40 100)">
+      <rect width="360" height="450" rx="18" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect width="360" height="52" rx="18" fill="#123c61"/>
+      <rect y="34" width="360" height="18" fill="#123c61"/>
+      <text x="180" y="34" text-anchor="middle" fill="#67e8f9" font-size="18" font-weight="700">ON PAPER</text>
+      <!-- document icon -->
+      <g transform="translate(150 74)">
+        <rect x="8" y="4" width="44" height="56" rx="6" fill="#eaf7ff" stroke="#12638a" stroke-width="2"/>
+        <path d="M36 4v16h16" fill="none" stroke="#12638a" stroke-width="2"/>
+        <path d="M18 34h24M18 44h24M18 54h16" stroke="#59c3ff" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <text x="28" y="160" fill="#31475a" font-size="15">- Sector cyber policy</text>
+      <text x="28" y="190" fill="#31475a" font-size="15">- Domestic hosting preference</text>
+      <text x="28" y="220" fill="#31475a" font-size="15">- Privacy and IT security rules</text>
+      <text x="28" y="250" fill="#31475a" font-size="15">- Financial resilience guidelines</text>
+      <text x="28" y="280" fill="#31475a" font-size="15">- ISO / SOC questionnaires</text>
+      <rect x="20" y="320" width="320" height="100" rx="12" fill="#eaf7ff"/>
+      <text x="180" y="360" text-anchor="middle" fill="#12638a" font-size="15" font-weight="700">Useful starting point</text>
+      <text x="180" y="388" text-anchor="middle" fill="#4a6a82" font-size="14">Does not prove who can export,</text>
+      <text x="180" y="410" text-anchor="middle" fill="#4a6a82" font-size="14">decrypt, or delete recovery copies</text>
+    </g>
+
+    <!-- OFTEN MISSING -->
+    <g transform="translate(420 100)">
+      <rect width="360" height="450" rx="18" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+      <rect width="360" height="52" rx="18" fill="#78350f"/>
+      <rect y="34" width="360" height="18" fill="#78350f"/>
+      <text x="180" y="34" text-anchor="middle" fill="#fcd34d" font-size="18" font-weight="700">OFTEN MISSING</text>
+      <!-- warning triangle icon -->
+      <g transform="translate(150 74)">
+        <path d="M30 8 L56 54 H4 Z" fill="#fff7ed" stroke="#b45309" stroke-width="2" stroke-linejoin="round"/>
+        <text x="30" y="46" text-anchor="middle" fill="#b45309" font-size="22" font-weight="700">!</text>
+      </g>
+      <text x="28" y="160" fill="#31475a" font-size="15">- Full inventory of data copies</text>
+      <text x="28" y="190" fill="#31475a" font-size="15">- Backup admins outside prod</text>
+      <text x="28" y="220" fill="#31475a" font-size="15">- Key custody outside ops teams</text>
+      <text x="28" y="250" fill="#31475a" font-size="15">- Clean-room restore evidence</text>
+      <text x="28" y="280" fill="#31475a" font-size="15">- Timed vendor session control</text>
+      <rect x="20" y="320" width="320" height="100" rx="12" fill="#fff7ed"/>
+      <text x="180" y="360" text-anchor="middle" fill="#92400e" font-size="15" font-weight="700">Where breaches usually land</text>
+      <text x="180" y="388" text-anchor="middle" fill="#4a6a82" font-size="14">Looks like normal work:</text>
+      <text x="180" y="410" text-anchor="middle" fill="#4a6a82" font-size="14">exports and shared admin domains</text>
+    </g>
+
+    <!-- ASK THESE FIVE -->
+    <g transform="translate(800 100)">
+      <rect width="360" height="450" rx="18" fill="#0a223c" stroke="#67e8f9" stroke-width="2"/>
+      <text x="180" y="36" text-anchor="middle" fill="#67e8f9" font-size="18" font-weight="700">ASK THESE FIVE</text>
+      <!-- shield checklist icon -->
+      <g transform="translate(150 56)">
+        <path d="M30 6 L54 16 V34 C54 48 42 56 30 62 C18 56 6 48 6 34 V16 Z" fill="#123c61" stroke="#67e8f9" stroke-width="2"/>
+        <path d="M20 34 l8 8 14-16" fill="none" stroke="#6ee7bd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="28" y="150" fill="#d8e9f5" font-size="15">For each critical system:</text>
+      <text x="28" y="188" fill="#e9f6fd" font-size="15">1. Who can read citizen rows?</text>
+      <text x="28" y="220" fill="#e9f6fd" font-size="15">2. Who can delete backups?</text>
+      <text x="28" y="252" fill="#e9f6fd" font-size="15">3. Who holds unwrap keys?</text>
+      <text x="28" y="284" fill="#e9f6fd" font-size="15">4. Can we restore offline?</text>
+      <text x="28" y="316" fill="#e9f6fd" font-size="15">5. Is vendor access timed?</text>
+      <rect x="20" y="350" width="320" height="70" rx="12" fill="#123c61"/>
+      <text x="180" y="380" text-anchor="middle" fill="#6ee7bd" font-size="15" font-weight="700">Hosting location is not control</text>
+      <text x="180" y="404" text-anchor="middle" fill="#8fc8e8" font-size="13">Prove admins, keys, and telemetry</text>
+    </g>
+  </g>
+</svg>

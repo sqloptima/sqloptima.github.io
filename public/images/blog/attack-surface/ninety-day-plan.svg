@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="t d">
+  <title id="t">Example 90-day database hardening plan</title>
+  <desc id="d">Day-zero triage plus staged windows from inventory through clean-room restore and detection tuning.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#eaf7ff"/></linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#bg)"/>
+  <text x="600" y="40" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="26" font-weight="700">EXAMPLE 90-DAY PLAN</text>
+  <text x="600" y="68" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="15">Day zero for emergencies - evidence gates before big platform spend</text>
+
+  <g font-family="Segoe UI,Arial">
+    <rect x="40" y="88" width="1120" height="72" rx="16" fill="#fef2f2" stroke="#f87171" stroke-width="2"/>
+    <text x="600" y="118" text-anchor="middle" fill="#991b1b" font-size="17" font-weight="700">DAY 0  |  Active compromise, leaked priv creds, failed restore, wormable CVE</text>
+    <text x="600" y="144" text-anchor="middle" fill="#7f1d1d" font-size="14">Do not wait for week four - incident commander + DBA + security own this lane</text>
+
+    <!-- Row 1 -->
+    <g transform="translate(40 180)">
+      <rect width="360" height="150" rx="16" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect width="360" height="44" rx="16" fill="#123c61"/>
+      <rect y="28" width="360" height="16" fill="#123c61"/>
+      <text x="180" y="30" text-anchor="middle" fill="#67e8f9" font-size="15" font-weight="700">DAYS 1-15  |  Inventory</text>
+      <text x="24" y="76" fill="#31475a" font-size="14">List databases, copies, privileges, keys, exports.</text>
+      <text x="24" y="100" fill="#31475a" font-size="14">Include BI dumps, vendor access, replicas.</text>
+      <text x="24" y="130" fill="#12638a" font-size="13" font-weight="700">Evidence: signed copy register</text>
+    </g>
+    <g transform="translate(420 180)">
+      <rect width="360" height="150" rx="16" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect width="360" height="44" rx="16" fill="#164b48"/>
+      <rect y="28" width="360" height="16" fill="#164b48"/>
+      <text x="180" y="30" text-anchor="middle" fill="#6ee7bd" font-size="15" font-weight="700">DAYS 1-14  |  Audit shipping</text>
+      <text x="24" y="76" fill="#31475a" font-size="14">Ship critical audit off-host early.</text>
+      <text x="24" y="100" fill="#31475a" font-size="14">Route alerts to a named SOC queue.</text>
+      <text x="24" y="130" fill="#12638a" font-size="13" font-weight="700">Evidence: forwarder stop = ticket</text>
+    </g>
+    <g transform="translate(800 180)">
+      <rect width="360" height="150" rx="16" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect width="360" height="44" rx="16" fill="#24355f"/>
+      <rect y="28" width="360" height="16" fill="#24355f"/>
+      <text x="180" y="30" text-anchor="middle" fill="#c7b6ff" font-size="15" font-weight="700">DAYS 1-30  |  Exposure + patch</text>
+      <text x="24" y="76" fill="#31475a" font-size="14">No public DB ports. MFA on admins.</text>
+      <text x="24" y="100" fill="#31475a" font-size="14">Patch engines, drivers, backup agents.</text>
+      <text x="24" y="130" fill="#12638a" font-size="13" font-weight="700">Evidence: reachability + CVE SLA</text>
+    </g>
+
+    <!-- Row 2 -->
+    <g transform="translate(40 350)">
+      <rect width="360" height="150" rx="16" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect width="360" height="44" rx="16" fill="#45361b"/>
+      <rect y="28" width="360" height="16" fill="#45361b"/>
+      <text x="180" y="30" text-anchor="middle" fill="#fcd34d" font-size="15" font-weight="700">DAYS 15-45  |  Authz + export</text>
+      <text x="24" y="76" fill="#31475a" font-size="14">Fix injection and object-level checks.</text>
+      <text x="24" y="100" fill="#31475a" font-size="14">Govern bulk export with monitoring.</text>
+      <text x="24" y="130" fill="#12638a" font-size="13" font-weight="700">Evidence: tenant isolation tests</text>
+    </g>
+    <g transform="translate(420 350)">
+      <rect width="360" height="150" rx="16" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect width="360" height="44" rx="16" fill="#4a2430"/>
+      <rect y="28" width="360" height="16" fill="#4a2430"/>
+      <text x="180" y="30" text-anchor="middle" fill="#fca5a5" font-size="15" font-weight="700">DAYS 15-60  |  Recovery plane</text>
+      <text x="24" y="76" fill="#31475a" font-size="14">Separate backup admins from prod.</text>
+      <text x="24" y="100" fill="#31475a" font-size="14">WORM/offline copies. Test key unwrap.</text>
+      <text x="24" y="130" fill="#12638a" font-size="13" font-weight="700">Evidence: prod admin denial test</text>
+    </g>
+    <g transform="translate(800 350)">
+      <rect width="360" height="150" rx="16" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect width="360" height="44" rx="16" fill="#0a223c"/>
+      <rect y="28" width="360" height="16" fill="#0a223c"/>
+      <text x="180" y="30" text-anchor="middle" fill="#67e8f9" font-size="15" font-weight="700">DAY 60 + 60-90</text>
+      <text x="24" y="76" fill="#31475a" font-size="14">Clean-room restore + reconciliation.</text>
+      <text x="24" y="100" fill="#31475a" font-size="14">Then detection drills and tuning.</text>
+      <text x="24" y="130" fill="#12638a" font-size="13" font-weight="700">Evidence: RTO/RPO + go/no-go</text>
+    </g>
+
+    <rect x="40" y="530" width="1120" height="90" rx="16" fill="#fff7ed" stroke="#f59e0b" stroke-width="2"/>
+    <text x="600" y="568" text-anchor="middle" fill="#92400e" font-size="16" font-weight="700">Sequence big migrations and new SOC tools after restore and key custody are proven</text>
+    <text x="600" y="596" text-anchor="middle" fill="#78716c" font-size="14">Unsupported engines may force migration sooner - still use evidence to prioritize</text>
+  </g>
+</svg>

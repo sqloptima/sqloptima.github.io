@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="t d">
+  <title id="t">Database attack surface defense</title>
+  <desc id="d">A vault-like database surrounded by identity, network, export, backup, and key doors that must each be hardened.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eaf7ff"/>
+    </linearGradient>
+    <linearGradient id="vault" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#123c61"/>
+      <stop offset="1" stop-color="#0a223c"/>
+    </linearGradient>
+    <filter id="s"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".18"/></filter>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <circle cx="980" cy="120" r="90" fill="#d9f0ff" opacity=".7"/>
+  <circle cx="140" cy="540" r="110" fill="#e8f6ff" opacity=".8"/>
+  <text x="600" y="58" text-anchor="middle" fill="#12638a" font-family="Segoe UI,Arial" font-size="18" font-weight="700" letter-spacing="2">DEFENSIVE FIELD GUIDE</text>
+  <text x="600" y="108" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="36" font-weight="800">DATABASE ATTACK SURFACE</text>
+  <text x="600" y="148" text-anchor="middle" fill="#3d5f78" font-family="Segoe UI,Arial" font-size="20">Hardening the doors - not chasing Hollywood exploits</text>
+
+  <g filter="url(#s)" transform="translate(420 200)">
+    <rect width="360" height="360" rx="40" fill="url(#vault)" stroke="#59c3ff" stroke-width="3"/>
+    <circle cx="180" cy="180" r="88" fill="none" stroke="#67e8f9" stroke-width="10"/>
+    <circle cx="180" cy="180" r="48" fill="#0f3354" stroke="#8fd8ff" stroke-width="4"/>
+    <rect x="168" y="150" width="24" height="70" rx="8" fill="#8fd8ff"/>
+    <text x="180" y="310" text-anchor="middle" fill="#d8e9f5" font-family="Segoe UI,Arial" font-size="22" font-weight="700">PRIMARY DB</text>
+    <text x="180" y="338" text-anchor="middle" fill="#8fc8e8" font-family="Segoe UI,Arial" font-size="15">citizen &amp; customer data</text>
+  </g>
+
+  <g font-family="Segoe UI,Arial" filter="url(#s)">
+    <g transform="translate(70 220)"><rect width="220" height="90" rx="18" fill="#fff" stroke="#7eb8d8" stroke-width="2"/><text x="110" y="38" text-anchor="middle" fill="#12638a" font-size="14" font-weight="700">FRONT DOOR</text><text x="110" y="62" text-anchor="middle" fill="#31475a" font-size="16">Public listeners</text></g>
+    <g transform="translate(70 350)"><rect width="220" height="90" rx="18" fill="#fff" stroke="#7eb8d8" stroke-width="2"/><text x="110" y="38" text-anchor="middle" fill="#12638a" font-size="14" font-weight="700">STAFF BADGE</text><text x="110" y="62" text-anchor="middle" fill="#31475a" font-size="16">Stolen credentials</text></g>
+    <g transform="translate(70 480)"><rect width="220" height="90" rx="18" fill="#fff" stroke="#7eb8d8" stroke-width="2"/><text x="110" y="38" text-anchor="middle" fill="#12638a" font-size="14" font-weight="700">LOADING DOCK</text><text x="110" y="62" text-anchor="middle" fill="#31475a" font-size="16">Bulk exports / ETL</text></g>
+    <g transform="translate(910 220)"><rect width="220" height="90" rx="18" fill="#fff" stroke="#7eb8d8" stroke-width="2"/><text x="110" y="38" text-anchor="middle" fill="#12638a" font-size="14" font-weight="700">MASTER KEYS</text><text x="110" y="62" text-anchor="middle" fill="#31475a" font-size="16">DBA  |  IAM  |  KMS</text></g>
+    <g transform="translate(910 350)"><rect width="220" height="90" rx="18" fill="#fff" stroke="#7eb8d8" stroke-width="2"/><text x="110" y="38" text-anchor="middle" fill="#12638a" font-size="14" font-weight="700">SIDE ALLEY</text><text x="110" y="62" text-anchor="middle" fill="#31475a" font-size="16">Vendors  |  CI/CD</text></g>
+    <g transform="translate(910 480)"><rect width="220" height="90" rx="18" fill="#fff" stroke="#7eb8d8" stroke-width="2"/><text x="110" y="38" text-anchor="middle" fill="#12638a" font-size="14" font-weight="700">RECOVERY</text><text x="110" y="62" text-anchor="middle" fill="#31475a" font-size="16">Backups &amp; restore</text></g>
+  </g>
+
+  <g stroke="#7eb8d8" stroke-width="2.5" fill="none" stroke-dasharray="6 6">
+    <path d="M290 265H420"/>
+    <path d="M290 395H420"/>
+    <path d="M290 525H420"/>
+    <path d="M780 265H910"/>
+    <path d="M780 395H910"/>
+    <path d="M780 525H910"/>
+  </g>
+</svg>
