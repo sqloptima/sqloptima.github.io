@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 740" role="img" aria-labelledby="t d">
+  <title id="t">Typical database estate landscape</title>
+  <desc id="d">Internet to edge to apps and admins through identity into the primary database, then a single tree trunk to four child planes.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#eaf7ff"/></linearGradient>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#7eb8d8"/></marker>
+  </defs>
+  <rect width="1200" height="740" fill="url(#bg)"/>
+  <text x="600" y="36" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="26" font-weight="700">CURRENT STATE OF MOST DATABASE ESTATES</text>
+  <text x="600" y="62" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="15">Disk encryption is common. Proof of who can copy, decrypt, or delete recovery is not.</text>
+
+  <g font-family="Segoe UI,Arial">
+    <rect x="80" y="90" width="220" height="70" rx="14" fill="#123c61" stroke="#59c3ff"/>
+    <text x="190" y="120" text-anchor="middle" fill="#e9f6fd" font-size="16" font-weight="700">Internet / remote</text>
+    <text x="190" y="142" text-anchor="middle" fill="#8fc8e8" font-size="13">users and scanners</text>
+
+    <rect x="460" y="90" width="280" height="70" rx="14" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+    <text x="600" y="120" text-anchor="middle" fill="#92400e" font-size="16" font-weight="700">Firewall / VPN / WAF</text>
+    <text x="600" y="142" text-anchor="middle" fill="#b45309" font-size="13">coverage is often uneven</text>
+
+    <rect x="80" y="250" width="220" height="70" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+    <text x="190" y="280" text-anchor="middle" fill="#14324b" font-size="16" font-weight="700">Applications</text>
+    <text x="190" y="302" text-anchor="middle" fill="#4a6a82" font-size="13">broad read roles</text>
+
+    <rect x="460" y="250" width="280" height="70" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+    <text x="600" y="280" text-anchor="middle" fill="#14324b" font-size="16" font-weight="700">Admins / vendors</text>
+    <text x="600" y="302" text-anchor="middle" fill="#4a6a82" font-size="13">standing privilege</text>
+
+    <rect x="900" y="250" width="220" height="70" rx="14" fill="#24355f" stroke="#b69cff"/>
+    <text x="1010" y="280" text-anchor="middle" fill="#c7b6ff" font-size="16" font-weight="700">Identity provider</text>
+    <text x="1010" y="302" text-anchor="middle" fill="#e6e0f7" font-size="13">password + weak MFA</text>
+
+    <rect x="360" y="400" width="480" height="80" rx="18" fill="#0a223c" stroke="#67e8f9" stroke-width="3"/>
+    <text x="600" y="435" text-anchor="middle" fill="#67e8f9" font-size="20" font-weight="700">PRIMARY DATABASE</text>
+    <text x="600" y="460" text-anchor="middle" fill="#8fc8e8" font-size="14">Trusted by apps, admins, ETL, and backup agents</text>
+
+    <rect x="40" y="610" width="240" height="80" rx="14" fill="#fff" stroke="#34d399" stroke-width="2"/>
+    <text x="160" y="645" text-anchor="middle" fill="#065f46" font-size="15" font-weight="700">Replicas / HA</text>
+    <text x="160" y="668" text-anchor="middle" fill="#047857" font-size="13">copy attacker writes too</text>
+
+    <rect x="320" y="610" width="240" height="80" rx="14" fill="#fff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="440" y="645" text-anchor="middle" fill="#5b21b6" font-size="15" font-weight="700">Warehouse / BI</text>
+    <text x="440" y="668" text-anchor="middle" fill="#6d28d9" font-size="13">weaker second copies</text>
+
+    <rect x="600" y="610" width="240" height="80" rx="14" fill="#fff" stroke="#fbbf24" stroke-width="2"/>
+    <text x="720" y="645" text-anchor="middle" fill="#92400e" font-size="15" font-weight="700">Backups</text>
+    <text x="720" y="668" text-anchor="middle" fill="#b45309" font-size="13">same admin domain</text>
+
+    <rect x="880" y="610" width="280" height="80" rx="14" fill="#fff" stroke="#f87171" stroke-width="2"/>
+    <text x="1020" y="645" text-anchor="middle" fill="#991b1b" font-size="15" font-weight="700">Keys</text>
+    <text x="1020" y="668" text-anchor="middle" fill="#b91c1c" font-size="13">single admin or provider KMS</text>
+  </g>
+
+  <!-- Upper flow arrows: never through boxes -->
+  <g stroke="#7eb8d8" stroke-width="2.8" fill="none" marker-end="url(#arr)">
+    <!-- Internet -> Firewall -->
+    <path d="M300 125H452"/>
+
+    <!-- Firewall forks to Applications and Admins -->
+    <path d="M520 160V200H190V242"/>
+    <path d="M600 160V242"/>
+
+    <!-- Applications -> Identity (route above boxes) -->
+    <path d="M190 250V210H1010V242"/>
+    <!-- Admins -> Identity -->
+    <path d="M740 285H892"/>
+
+    <!-- Applications -> Primary -->
+    <path d="M190 320V360H480V392"/>
+    <!-- Admins -> Primary -->
+    <path d="M600 320V392"/>
+    <!-- Identity -> Primary -->
+    <path d="M1010 320V360H840V392"/>
+  </g>
+
+  <!-- Single trunk tree under Primary: darker so it stays visible -->
+  <g stroke="#12638a" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M600 478V540"/>
+    <path d="M160 540H1020"/>
+    <path d="M160 540V600" marker-end="url(#arr)"/>
+    <path d="M440 540V600" marker-end="url(#arr)"/>
+    <path d="M720 540V600" marker-end="url(#arr)"/>
+    <path d="M1020 540V600" marker-end="url(#arr)"/>
+  </g>
+  <circle cx="600" cy="478" r="4" fill="#12638a"/>
+  <text x="620" y="515" fill="#12638a" font-family="Segoe UI,Arial" font-size="12" font-weight="700">one trunk, four dependent planes</text>
+</svg>

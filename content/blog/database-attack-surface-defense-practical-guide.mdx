@@ -1,0 +1,622 @@
+---
+title: 'Database attack surface defense'
+description: 'How database breaches often start with a valid login or an overprivileged app — and how to test admins, keys, copies, and restore before you need them.'
+summary: 'A practical guide for DBAs, application owners, and security teams on common attack paths, control limits, detection signals, and recovery drills.'
+date: 2026-10-04
+published: true
+category: Security & recovery
+subcategory: Data protection
+---
+
+A database can be encrypted and still lose data. A stolen login, an app role that can read too much, or a bulk export that nobody tracks can all look like normal work until the damage is done.
+
+This guide is for **DBAs**, **application owners**, and **security teams**. It maps common ways data leaves or gets changed, what each control actually stops, and how to **test** recovery when production admin access is no longer trustworthy. The ideas apply across engines; examples lean on **SQL Server** where that helps.
+
+**Scope:** defensive planning only — no exploit recipes. Study attack paths so you can harden systems you are allowed to touch.
+
+<nav className="article-contents" aria-label="Article contents">
+  <strong>Contents</strong>
+  <ul>
+    <li><a href="#plain-english">The idea in simple terms</a></li>
+    <li><a href="#current-state">1. Typical database estates</a></li>
+    <li><a href="#issues">2. Common gaps</a></li>
+    <li><a href="#risk-factors">3. Risk factors</a></li>
+    <li><a href="#attack-paths">4. Attack paths (defensive catalog)</a></li>
+    <li><a href="#attacker-tools">5. Tool categories attackers reuse</a></li>
+    <li><a href="#detection-gaps">6. Why suspicious activity goes unnoticed</a></li>
+    <li><a href="#principles">7. Principles that change outcomes</a></li>
+    <li><a href="#measures">8. Controls, detection, and recovery</a></li>
+    <li><a href="#ninety-days">9. Example 90-day plan</a></li>
+    <li><a href="#myths">10. Myths</a></li>
+    <li><a href="#checklist">Closing checklist</a></li>
+    <li><a href="#nepal-lens">Nepal: policy vs proof</a></li>
+    <li><a href="#further-study">Learning resources (defenders)</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ul>
+</nav>
+
+<h2 id="plain-english">The idea in simple terms</h2>
+
+Think of the database as a vault with several doors. Each door is a normal business path — not a Hollywood exploit. Teams in Nepal facing residency or privacy rules can also read the [Nepal: policy vs proof](#nepal-lens) sidebar for local examples.
+
+<VaultDoorsDiagram />
+
+<div className="security-table vault-doors-legend">
+
+| Door | In simple words | What usually goes wrong | What “good” looks like |
+| --- | --- | --- | --- |
+| Front door | The network path that reaches the database | The database port is open to the Internet, or too many machines can connect | Outside tests cannot reach the database; only approved app networks can |
+| Staff badge | Who is allowed to log in as a privileged user | Shared passwords, reused logins, or weak <Acronym title="Multi-Factor Authentication">MFA</Acronym> — one stolen secret is enough | Each admin has their own account; phishing-resistant MFA on interactive login |
+| Loading dock | How large amounts of data leave the system | Bulk exports, dumps, or analytics sync look like normal work and nobody tracks them | Big extracts need approval, a clear destination, and monitoring of unusual read volume |
+| Master keys | Who can decrypt, administer, or wipe recovery | DBA, cloud <Acronym title="Identity and Access Management">IAM</Acronym>, <Acronym title="Key Management Service">KMS</Acronym>, and backup consoles share the same people or passwords | Production admins cannot freely change protected backups or key recovery |
+| Side alley | Helpers and tools that sit outside the main app | Vendor remote support, deploy pipelines, or linked servers keep standing high access | Vendor and CI access is time-boxed, recorded, and reviewed |
+
+</div>
+
+---
+
+<h2 id="current-state">1. Typical database estates</h2>
+
+In many production environments — public sector, finance, SaaS — the layout looks like this. The picture is familiar worldwide.
+
+<EstateLandscapeDiagram />
+
+<div className="security-table estate-landscape-legend">
+
+| Part of the estate | In simple words | What we often see | Why it matters |
+| --- | --- | --- | --- |
+| Edge path | How users and attackers first reach your network | Firewall / VPN / WAF coverage is uneven; some paths are watched, others are not | If one path is open, everything behind it is easier to reach |
+| Applications | The software staff and customers use every day | App accounts can read almost every table (“the app needs everything”) | A stolen app token or injection bug becomes a wide data leak |
+| Admins / vendors | People who maintain the system | Shared DBA logins and standing vendor access | One compromised admin account can dump data or break recovery |
+| Identity | The login system (<Acronym title="Identity Provider">IdP</Acronym>) | Passwords only, or MFA that is easy to phish | Attackers prefer stealing a valid login over breaking encryption |
+| Primary database | Where the real business records live | Trusted by apps, <Acronym title="Extract, Transform, Load">ETL</Acronym>, and backup tools | Controls must sit on identity and authorization, not only on the disk |
+| Replicas / HA | Standby copies for uptime | Treated as “disaster recovery” even though they copy every write | Bad or fraudulent changes land on the replica too |
+| Warehouse / BI | Reporting and analytics copies | Extra copies with weaker rules and unclear owners | Sensitive rows leave the approved boundary without anyone noticing |
+| Backups | Your last chance to restore | Same admins and passwords as production; restore rarely practiced | Ransomware or a bad admin can delete recovery with the same credential |
+| Keys | What unlocks encrypted files and backups | One person can both run production and manage keys | Lost or stolen key access can make “immutable” backups unreadable |
+
+</div>
+
+Patterns to keep in mind (same themes as the table):
+
+- **Encryption at rest** (<Acronym title="Transparent Data Encryption">TDE</Acronym> or volume encryption) is often already on.
+- **<Acronym title="Transport Layer Security">TLS</Acronym>** is improving, but some app servers still skip certificate checks.
+- **Monitoring** still hunts malware more than **odd but legitimate** data access.
+
+---
+
+<h2 id="issues">2. Common gaps</h2>
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/current-state-issues.svg" alt="Eight estate issues: public listeners, shared DBA accounts, over-broad app roles, untracked copies, shared backup admins, BYOK limits, green backup jobs, and treating replicas as the only DR" />
+  <figcaption><strong>Checklist green is not the same as safe.</strong> A passed audit form can still lose data through an ordinary authenticated read.</figcaption>
+</figure>
+
+<div className="security-table">
+
+| Issue | Why it matters |
+| --- | --- |
+| Public or over-exposed listeners | Attackers can reach the engine without owning the whole network |
+| Shared DBA / `sa`-style accounts | One stolen secret can mean full authority |
+| App roles that can `SELECT` everything | Injection or token theft becomes a wide read |
+| Untracked copies | Laptop dumps, CI fixtures, BI extracts, support attachments |
+| Backup admins = production admins | Ransomware can disable recovery with the same credential |
+| “<Acronym title="Bring Your Own Key">BYOK</Acronym> enabled” on a slide | Keys in a provider <Acronym title="Key Management Service">KMS</Acronym> still decrypt for **authorized** cloud services |
+| Green backup jobs | Jobs succeed while restores fail (wrong tool, missing logs, lost keys) |
+| Replicas treated as the only DR | Standbys copy **bad** writes as faithfully as good ones; they are not a substitute for point-in-time backup |
+
+</div>
+
+---
+
+<h2 id="risk-factors">3. Risk factors</h2>
+
+Weakness is not one CVSS number. Use the scorecard to **prioritize** work — not to predict breach odds.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/risk-scorecard.svg" alt="Weak versus stronger signals for identity, network, authorization, crypto, and recovery" />
+  <figcaption><strong>Planning aid.</strong> One serious gap (for example shared backup admin) can matter more than several minor ones. Weight by data sensitivity, reachable privilege, and recovery dependencies.</figcaption>
+</figure>
+
+<div className="security-table">
+
+| Risk factor | Weak signal | Stronger signal |
+| --- | --- | --- |
+| Identity | Password-only admins; shared logins | Phishing-resistant <Acronym title="Multi-Factor Authentication">MFA</Acronym>; unique named admins |
+| Network | DB reachable from Internet or flat LAN | Private listener; microsegmentation |
+| Authorization | Table-level “app_user = dbo-lite” | Object/row checks; least privilege; governed export path |
+| Crypto boundary | <Acronym title="Transparent Data Encryption">TDE</Acronym> only | <Acronym title="Transparent Data Encryption">TDE</Acronym> **plus** column/client encryption for sensitive fields |
+| Copy control | Unknown <Acronym title="Extract, Transform, Load">ETL</Acronym> and “temporary” dumps | Copy register; approved bulk export with monitoring |
+| Recovery | Same <Acronym title="Identity Provider">IdP</Acronym> for prod and backup | Tested independence; enforced retention; key recovery proven |
+| Detection | Antivirus on the host only | Export baselines; privilege-change alerts; audit heartbeat |
+| Supply chain | Standing vendor DBA access | Time-boxed <Acronym title="Privileged Access Management">PAM</Acronym>; recorded sessions |
+
+</div>
+
+**Prioritization order (illustrative):** privileged identity or recovery compromise → app paths that allow mass disclosure → backups sharing prod authority → unknown copies → silent row changes → unpatched engines → shared DR dependencies → lost or untested keys.
+
+---
+
+<h2 id="attack-paths">4. Attack paths (defensive catalog)</h2>
+
+Attackers usually want one of a few outcomes: **copy** data, **alter** records, **deny** service, or **control** recovery. The paths below are categories for control design — not instructions.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/attack-paths-catalog.svg" alt="Nine defensive attack-path categories from valid sessions through supply-chain abuse and direct exposure" />
+  <figcaption><strong>Map controls to outcomes.</strong> Each path needs different detection and evidence.</figcaption>
+</figure>
+
+<h3 id="path-a" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#123c61"/><circle cx="22" cy="18" r="7" fill="none" stroke="#67e8f9" strokeWidth="2.2"/><path d="M12 32c4-7 16-7 20 0" fill="none" stroke="#67e8f9" strokeWidth="2.2"/></svg>
+  Path A — Valid session, normal features
+</h3>
+
+```text
+Stolen credential → VPN or app login → Over-broad role
+→ Query or export → Data leaves
+```
+
+Storage encryption does not help if the principal is allowed to read the data. Mandiant’s 2024 write-up of **UNC5537** is a useful example **for this path only**: stolen **customer** credentials and missing customer-side controls on certain Snowflake deployments — not a claim that every cloud platform was breached.
+
+<h3 id="path-b" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#164b48"/><rect x="12" y="14" width="20" height="16" rx="2" fill="none" stroke="#6ee7bd" strokeWidth="2.2"/><path d="M16 30h12" stroke="#6ee7bd" strokeWidth="2.2"/><path d="M18 20h8M18 25h5" stroke="#6ee7bd" strokeWidth="2"/></svg>
+  Path B — Application abuse (injection or weak object checks)
+</h3>
+
+```text
+Reach app → Inject or skip authorization → Unauthorized READ/UPDATE
+→ Fraudulent change replicated everywhere
+```
+
+Fix SQL injection **and** per-record authorization. A “clean” query can still exfiltrate if the app role is too wide.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/application-attack-path.svg" alt="Application attack chain from internet request through app identity to SQL impact, cut by secure coding, least privilege, and protected recovery" />
+  <figcaption><strong>Break the app path first.</strong> If one token can read every sensitive table, fix roles before buying another edge box.</figcaption>
+</figure>
+
+<h3 id="path-c" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#24355f"/><path d="M14 28h16M22 14v16" stroke="#c7b6ff" strokeWidth="2.4"/><circle cx="22" cy="22" r="5" fill="none" stroke="#c7b6ff" strokeWidth="2.2"/><path d="M30 14l4 4-4 4" fill="none" stroke="#c7b6ff" strokeWidth="2"/></svg>
+  Path C — Admin, vendor, or pipeline compromise
+</h3>
+
+```text
+Phish DBA / steal cloud IAM / poison update → Privileged access
+→ Disable audit or retention → Dump or encrypt
+```
+
+<Acronym title="Identity Provider">IdP</Acronym>, orchestration, backup consoles, and <Acronym title="Key Management Service">KMS</Acronym> often beat a single table <Acronym title="Common Vulnerabilities and Exposures">CVE</Acronym> in impact.
+
+<h3 id="path-d" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#78350f"/><path d="M14 30h16v-10H14z" fill="none" stroke="#fcd34d" strokeWidth="2.2"/><path d="M18 20v-4h8v4" stroke="#fcd34d" strokeWidth="2.2"/><path d="M22 24v4" stroke="#fcd34d" strokeWidth="2.2"/></svg>
+  Path D — Recovery targeted first
+</h3>
+
+```text
+Backup-admin rights → Shorten retention / delete copies / break keys
+→ Ransomware or wipe → No clean restore
+```
+
+Test **which** admin can change retention, delete protected versions, or reach encryption keys — not just whether a checkbox says “immutable.”
+
+<h3 id="path-e" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#0c4a6e"/><rect x="12" y="14" width="20" height="16" rx="2" fill="none" stroke="#7dd3fc" strokeWidth="2.2"/><path d="M16 20h12M16 25h8M16 30h10" stroke="#7dd3fc" strokeWidth="2"/></svg>
+  Path E — Living off the land
+</h3>
+
+```text
+Ordinary admin tools → Native dump, replication, PowerShell, cloud CLI
+→ Slow exfil to “approved” storage
+```
+
+Defenders hunt binaries; attackers use **your** `sqlcmd`, `bcp`, SSMS, `pg_dump`, and sync jobs.
+
+<h3 id="path-f" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#4a2430"/><path d="M14 14h16v16H14z" fill="none" stroke="#fca5a5" strokeWidth="2.2"/><path d="M18 22h8M22 18v8" stroke="#fca5a5" strokeWidth="2.2"/><path d="M30 14l4 4" stroke="#fca5a5" strokeWidth="2"/></svg>
+  Path F — Integrity without outage
+</h3>
+
+```text
+Insider or stolen DBA → Change registry / ledger fields
+→ Replication spreads the lie → Backups preserve false state
+```
+
+Checksums prove bytes; they do not prove a land transfer is legitimate.
+
+<h3 id="path-g" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#7f1d1d"/><path d="M12 30c4-14 16-14 20 0" fill="none" stroke="#fecaca" strokeWidth="2.2"/><path d="M16 22h12M22 16v12" stroke="#fecaca" strokeWidth="2.2"/><circle cx="22" cy="22" r="3" fill="#fecaca"/></svg>
+  Path G — Availability without engine exploit
+</h3>
+
+```text
+Saturate upstream links / expensive authenticated queries / key service outage
+→ App cannot connect or decrypt
+```
+
+Private DB listeners do not fix saturated ISP paths or <Acronym title="Key Management Service">KMS</Acronym> dependencies.
+
+<h3 id="path-h" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#155e75"/><path d="M14 28h16M22 14l10 10-10 10" fill="none" stroke="#a5f3fc" strokeWidth="2.2"/><circle cx="14" cy="28" r="3" fill="#a5f3fc"/><circle cx="32" cy="24" r="3" fill="#a5f3fc"/></svg>
+  Path H — Copies and supply chain
+</h3>
+
+```text
+Contractor laptop → VPN → Prod read role
+  or  Analytics sink / ticket attachment / foreign SaaS sync
+→ Rows leave the intended boundary
+```
+
+<h3 id="path-i" className="attack-path-title">
+  <svg className="attack-path-icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="22" fill="#1e3a5f"/><path d="M12 26h20M16 26v6h12v-6" fill="none" stroke="#93c5fd" strokeWidth="2.2"/><path d="M18 20l4-8 4 8" fill="none" stroke="#93c5fd" strokeWidth="2.2"/><circle cx="22" cy="14" r="2.5" fill="#fbbf24"/></svg>
+  Path I — Direct exposure and patch debt
+</h3>
+
+```text
+Internet-facing SQL or RDP → Credential guess or known CVE
+→ foothold → lateral move toward data
+```
+
+Shodan-style exposure and missed **engine, driver, and extension** patches belong in the same program as identity work.
+
+---
+
+<h2 id="attacker-tools">5. Tool categories attackers reuse</h2>
+
+Defenders should know these **classes**. Legitimate staff use the same tools daily.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/attacker-tool-categories.svg" alt="Nine attacker tool categories with icons: credentials, access brokers, database clients, cloud consoles, living off the land, C2, ransomware, exfil, and scanners" />
+  <figcaption><strong>Watch paths, not product bingo.</strong> Block and monitor identity, export, backup admin, and public listeners.</figcaption>
+</figure>
+
+<div className="security-table">
+
+| Category | Examples of tool *classes* | Defensive implication |
+| --- | --- | --- |
+| Credential access | Phishing, infostealers, token theft | Phishing-resistant MFA; short-lived tokens |
+| Access brokers | Stolen VPN/RDP/cloud sessions | Assume reuse; device and geo anomalies |
+| Database clients | SSMS, `sqlcmd`, `bcp`, JDBC/ODBC, `pg_dump` (legacy **Azure Data Studio** may still appear on old laptops — retired Feb 2026) | PAM gateways; session recording on jump hosts |
+| Cloud / IdP consoles | Azure Portal, AWS Console, IAM CLI | Break-glass accounts; alert on role grants |
+| Living-off-the-land | PowerShell, `curl`, scheduled tasks | EDR on admin boxes; script constraints |
+| Ransomware / wipers | Commodity encryptors | Offline/WORM copies; clean-room restore |
+| Exfil channels | HTTPS to cloud storage, sync tools | Egress rules; DLP; volume baselines |
+| Scanners | Internet-wide probes for RDP/SQL | No public DB ports; patch SLAs |
+
+</div>
+
+---
+
+<h2 id="detection-gaps">6. Why suspicious activity goes unnoticed</h2>
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/detection-blind-spots.svg" alt="Six reasons attackers blend in: antivirus-only hunting, trusted logins, logs on the same host, no export baseline, shared admins, untested backups" />
+  <figcaption><strong>They often look like normal work.</strong> Baseline exports, privilege grants, retention changes, and missing audit heartbeats.</figcaption>
+</figure>
+
+<div className="security-table">
+
+| Blind spot | What happens |
+| --- | --- |
+| Signature-only stacks | Living-off-the-land leaves little to hash |
+| “Authorized = safe” | Large `SELECT`s and exports ignored |
+| Audit on the attacked host | Logs never reach the SIEM |
+| No export baseline | Nobody knows normal row/byte volume |
+| Shared accounts | No attribution for `sa` / shared DBA |
+| Silent forwarders | Dashboards stay green when shipping stops |
+| Integrity gaps | Fraudulent updates look healthy |
+| Backup success ≠ recovery | Retention shortened while jobs stay green |
+
+</div>
+
+**Signals worth operationalizing** — pick what your stack can actually emit; assign an owner and a test:
+
+<div className="security-table">
+
+| Signal | Typical source | Prerequisite | Who responds | How to test |
+| --- | --- | --- | --- | --- |
+| Privileged human login without expected MFA | IdP / PAM (not the SQL engine) | MFA enforced at IdP or gateway for interactive admin | SOC / identity team | Red-team login from new device; confirm alert |
+| Unusual export or read volume | App logs, DB gateway, DAM, or storage egress | Baseline per role/service; note `response_rows` in SQL audit is **not** universal on all SQL Server editions ([audit records](https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records?view=sql-server-ver17)) | SOC + app owner | Simulate large read in lower env; confirm ticket |
+| New replication / linked server / dump job | SQL Agent, config tables, change tickets | Inventory of approved jobs | DBA + SOC | Create test job; must page or queue |
+| Backup retention or immutability change | Backup product API / cloud audit | Separate backup admin tested | Backup owner | Attempt change with prod admin; should fail or alert |
+| Audit forwarder heartbeat | Log platform | Off-host shipping | SOC | Stop forwarder deliberately; alert within SLA |
+| KMS decrypt spike | Cloud audit logs | **Supporting** signal only — caching decouples keys from each row read | Security engineering | Compare with app export metrics, not alone |
+
+</div>
+
+**Workload identities** (services, CI jobs) do not get interactive <Acronym title="Multi-Factor Authentication">MFA</Acronym> prompts. Scope their credentials, rotate often, and monitor what they can read — the same as human admins.
+
+CISA and others document **living-off-the-land** persistence: hunt unusual use of legitimate admin tools, not only new malware files. See [CISA advisory AA24-038A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-038a) (PRC state actors, critical infrastructure) as one public example.
+
+---
+
+<h2 id="principles">7. Principles that change outcomes</h2>
+
+1. **Assume stolen identity** — design for compromised <Acronym title="Identity Provider">IdP</Acronym> and sessions.
+2. **Least privilege** — separate app, migration, analytics, replication, backup, and security roles.
+3. **Private data paths** — authenticate every hop; no Internet-facing DB listener.
+4. **Encrypt for the right threat** — <Acronym title="Transparent Data Encryption">TDE</Acronym> is not a column trust boundary ([Always Encrypted](/blog/always-encrypted-sql-server-practical-guide/) when DBAs must not see values).
+5. **Govern copies** — dumps, replicas, and warehouses are in scope.
+6. **Recovery independence** — prod compromise must not easily admin backups, keys, or offline copies (separate <Acronym title="Identity Provider">IdP</Acronym> is one pattern; **test** federation and shared break-glass).
+7. **Prove restore** — clean-room plus business reconciliation, not only “files restored.”
+8. **Detect behavior** — exports, grants, retention, missing audit.
+9. **Minimize retention** — less stored data means less to steal later.
+10. **Evidence over badges** — denied cross-tenant tests beat questionnaire rows.
+
+---
+
+<h2 id="measures">8. Controls, detection, and recovery</h2>
+
+### 8.1 First hardening moves (days, not years)
+
+<div className="security-table security-coverage-table">
+
+| Action | Helps with | Done when |
+| --- | --- | --- |
+| Remove public database ports | Path I; reduces direct noise on G/H | External reachability test fails cleanly |
+| Upstream <Acronym title="Distributed Denial of Service">DDoS</Acronym> / link capacity; query timeouts and limits | Path G saturation / expensive queries | Load test stays within SLO |
+| Scoped contractor/VPN access; copy register | Path H | Contractor cannot reach prod without ticketed role |
+| Phishing-resistant <Acronym title="Multi-Factor Authentication">MFA</Acronym>; no shared DBA passwords | Path A/C | Interactive privileged humans covered |
+| Separate backup admins from production domain | Path D | Simulated prod admin **cannot** change protected retention or delete locked test backup |
+| Parameterized SQL; object-level authorization | Path B | Tenant A cannot read/update tenant B via app |
+| Governed bulk export (see below) | Path A/E | Bulk path needs approval; reads monitored |
+| Ship audit off-host with heartbeat | Detection | Deliberate forwarder stop pages <Acronym title="Security Operations Center">SOC</Acronym> |
+| Patch engines, drivers, backup agents, admin tools | Path I | SLA met for critical CVEs |
+| Clean-room restore drill | All recovery paths | Timed <Acronym title="Recovery Time Objective">RTO</Acronym>/RPO + reconciliation signed |
+
+</div>
+
+**Bulk export and “dual control”:** approving an export workflow does **not** stop someone with broad `SELECT` from copying data row by row. A workable design combines:
+
+- Application identities scoped to records/columns they need
+- A **separate** export service or role for large extracts
+- Approval tied to **dataset, purpose, and destination**
+- Time-limited grants where possible
+- Monitoring of **cumulative** read volume per identity
+
+Dual approval is one layer in that stack — not a magic database permission.
+
+### 8.2 Encryption — pick the layer
+
+<figure className="security-section-visual">
+  <img src="/images/blog/security/data-protection-layers.svg" alt="Data protection layers: TLS in transit, Always Encrypted in use, TDE at rest, backup encryption for recovery" />
+  <figcaption><strong>Match control to data state.</strong> <Acronym title="Transparent Data Encryption">TDE</Acronym> does not stop an authorized session. Always Encrypted does not replace app authorization.</figcaption>
+</figure>
+
+<div className="security-table">
+
+| Control | Protects / enables | Does **not** replace |
+| --- | --- | --- |
+| **TDE** (SQL Server) | Data files and **TDE-protected database backups** at rest ([TDE](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/transparent-data-encryption)) | Authorized SQL session; remember cert/EKM recovery on restore |
+| **Volume encryption** | Stolen disk / copied volume offline | Authorized session; a copied `.mdf` out of band may lack the same wrapper |
+| **TLS 1.2+ with valid cert chain** | Wire sniffing on the path | Stolen credentials; avoid `TrustServerCertificate=true` in production ([SqlClient](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax)) |
+| **Always Encrypted** | Operators/DBAs reading selected columns without key access | Attacker with approved app **and** key access |
+| **Always Encrypted with enclaves** | Server-side operations on protected columns **inside an attested enclave** (trust the enclave model) | Malicious logic in an approved client |
+| **External / BYOK keys in cloud KMS** | Customer custody and authorization over **key use** | Automatic provider exclusion — authorized services may still receive plaintext key material ([AWS external key stores](https://docs.aws.amazon.com/kms/latest/developerguide/keystore-external.html)) |
+| **Client-side / app-layer field encryption** | Plaintext only where you run crypto | Compromised app host or key in config |
+| **Dynamic data masking** | Casual over-read in some UIs | Users who can run ad hoc queries may infer values ([DDM](https://learn.microsoft.com/en-us/sql/relational-databases/security/dynamic-data-masking?view=sql-server-ver17)) |
+
+</div>
+
+Practical SQL Server pairing: **<Acronym title="Transparent Data Encryption">TDE</Acronym>** for files/backups at rest; **Always Encrypted** for national IDs, cards, salaries; **app authorization + <Acronym title="Multi-Factor Authentication">MFA</Acronym>** so the client is not a firehose.
+
+### 8.3 Buying tools (against a failure scenario)
+
+<div className="security-table">
+
+| Layer | Candidate classes | Role |
+| --- | --- | --- |
+| Edge / <Acronym title="Distributed Denial of Service">DDoS</Acronym> | Cloudflare, Akamai, carrier scrubbing | Path G upstream |
+| <Acronym title="Next-Generation Firewall">NGFW</Acronym> / <Acronym title="Web Application Firewall">WAF</Acronym> | Palo Alto, Fortinet, F5 | Segment — not safe SQL by itself |
+| <Acronym title="Identity and Access Management">IAM</Acronym> / <Acronym title="Privileged Access Management">PAM</Acronym> | Entra ID, CyberArk, Delinea, Teleport | Named, time-limited privilege |
+| <Acronym title="Endpoint Detection and Response">EDR</Acronym> / <Acronym title="Extended Detection and Response">XDR</Acronym> | Defender, CrowdStrike, SentinelOne | Admin jump boxes |
+| <Acronym title="Security Information and Event Management">SIEM</Acronym> / <Acronym title="Security Orchestration, Automation and Response">SOAR</Acronym> | Sentinel, Splunk, Wazuh | Correlate exports, grants, log loss |
+| <Acronym title="Database Activity Monitoring">DAM</Acronym> / native audit | Guardium, SQL Audit, `pgAudit` | Visibility — fix authz too |
+| Backup + object lock | Veeam, Rubrik, S3 Object Lock | Retention vs **readable** recovery are different ([Object Lock](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html)) |
+| Keys / HSM | Key Vault, Managed HSM, Vault | Test denial **and** recovery |
+
+</div>
+
+Pass/fail on restore proof, key recovery, and no shared default admins **before** feature scoring.
+
+### 8.4 Target architecture (trust boundaries)
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/target-architecture.svg" alt="Hardened architecture with edge controls, PAM, private database listener, external keys, separate recovery, and SOC" />
+  <figcaption><strong>Compact target.</strong> The diagram is the picture; the boundaries below are what to test.</figcaption>
+</figure>
+
+In words:
+
+- **Users and apps** terminate <Acronym title="Transport Layer Security">TLS</Acronym> at the app tier; apps use scoped DB identities — not admin shared logins.
+- **Administrators** reach databases only through <Acronym title="Privileged Access Management">PAM</Acronym>/jump hosts with session recording; <Acronym title="Multi-Factor Authentication">MFA</Acronym> is enforced at the <Acronym title="Identity Provider">IdP</Acronym>/gateway for humans.
+- **The database listener** sits on a private network segment — not the public Internet.
+- **Keys** live in a service the DBA cannot arbitrarily export; app and DBA key use are separated.
+- **Backups and object-lock storage** use **different** admin credentials and runbooks than production; offline or compliance-mode retention is tested against a simulated prod admin.
+- **Audit and alerts** land in a <Acronym title="Security Information and Event Management">SIEM</Acronym> the database team cannot silently delete; heartbeats are monitored.
+- **<Acronym title="Security Operations Center">SOC</Acronym>** owns playbooks for export spikes, grant changes, retention edits, and forwarder loss.
+
+### 8.5 Detection use-cases (summary)
+
+Use the signal table in [section 6](#detection-gaps). Add correlation: a <Acronym title="Key Management Service">KMS</Acronym> spike plus a new linked server plus a backup retention change on the same timeline is more interesting than any one event alone.
+
+### 8.6 Recovery that matches the harm
+
+<div className="security-table security-evidence-table">
+
+| Harm | Response focus |
+| --- | --- |
+| Data **copied** | Revoke access; preserve evidence; notify as required — **restore does not recall copies** |
+| Data **altered** | Incident command decides write suspension per service; compare trusted history; reconcile later legitimate events |
+| Ransomware / wipe | Clean-room restore from independent copies; **investigate** possible theft; do not assume exfil until evidence says so |
+| Keys lost | Recover key custody before bulk restore; protected objects may exist but be unreadable |
+| Site / power / ISP loss | Failover with fencing; shared power/ISP/admin domain is not independence |
+
+</div>
+
+**Example recovery drill** (illustrative <Acronym title="Recovery Point Objective">RPO</Acronym> 4 hours, <Acronym title="Recovery Time Objective">RTO</Acronym> 8 hours — set your own):
+
+1. **Charter:** name the business service, owners, <Acronym title="Recovery Point Objective">RPO</Acronym>/<Acronym title="Recovery Time Objective">RTO</Acronym>, and the ledger/registry/source used to reconcile truth.
+2. **Assume prod admin is untrusted:** stand up a **clean-room** host/network; use recovery runbooks and keys that prod admin cannot reach.
+3. **Pick a recovery point** from evidence — last green backup job is a candidate, not proof of good data.
+4. **Restore** full/diff/log chain (or platform equivalent), keys, and app config; confirm retention covers the scenario.
+5. **Validate twice:** DB consistency checks **and** business reconciliation against independent records.
+6. **Re-enter safely:** remove the abuse path, rotate secrets, confirm monitoring, get business sign-off before cutover.
+7. **Retrospective:** record actual <Acronym title="Recovery Time Objective">RTO</Acronym>/<Acronym title="Recovery Point Objective">RPO</Acronym>, blockers, and owners for fixes.
+
+Preserve forensic artifacts where you can before destructive steps. For ransomware, follow your incident plan ([CISA ransomware guide](https://www.cisa.gov/stopransomware/ransomware-guide), [NIST SP 800-61 Rev. 3](https://csrc.nist.gov/pubs/sp/800/61/r3/final)).
+
+GitLab’s 2017 database outage postmortem is a sobering reminder: **backup existence ≠ tested restore path** — worth reading before you trust a green dashboard ([GitLab incident](https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/)).
+
+---
+
+<h2 id="ninety-days">9. Example 90-day plan</h2>
+
+Ninety days is a **sample** cadence. Critical services may need faster gates; lower tiers can stretch. If you already have active compromise, exposed break-glass passwords, broken backups, or a wormable <Acronym title="Common Vulnerabilities and Exposures">CVE</Acronym> — treat that as **day zero**, not “week four.”
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/ninety-day-plan.svg" alt="Ninety-day plan including day-zero triage, inventory, exposure, authz, recovery plane, clean-room restore, and detection tuning" />
+  <figcaption><strong>Evidence before big spend.</strong> Start audit shipping early; use the last month for exercises and tuning.</figcaption>
+</figure>
+
+<div className="security-table security-plan-table">
+
+| Window | Work | Owner (example) | Evidence |
+| --- | --- | --- | --- |
+| **Day&nbsp;0** | Active incident, leaked priv creds, failed restore test, emergency patch | Incident commander + DBA + security | Ticket / war-room record; patch or containment proof |
+| Days&nbsp;1–15 | Inventory DBs, copies, privileges, keys, exports | DBA + app owners | Signed copy register |
+| Days&nbsp;1–14 | Ship critical audit off-host; route alerts to a named queue | <Acronym title="Security Operations Center">SOC</Acronym> + DBA | Deliberate forwarder stop creates ticket |
+| Days&nbsp;1–30 | Close public exposure; <Acronym title="Multi-Factor Authentication">MFA</Acronym>; end shared admins | Identity + network | Reachability + privilege report |
+| Days&nbsp;1–30 | Patch engines, drivers, backup agents, admin tools | DBA + ops | SLA report for critical <Acronym title="Common Vulnerabilities and Exposures">CVEs</Acronym> |
+| Days&nbsp;15–45 | Fix injection/authz; governed bulk export | App owner + DBA | Tenant isolation negative tests |
+| Days&nbsp;15–60 | Separate backup plane; <Acronym title="Write Once Read Many retention">WORM</Acronym>/offline; key recovery test | Backup + security | Prod admin cannot break protected retention |
+| Day&nbsp;60 | Clean-room restore + business reconciliation | DBA + business owner | Timed <Acronym title="Recovery Time Objective">RTO</Acronym>/<Acronym title="Recovery Point Objective">RPO</Acronym> sign-off |
+| Days&nbsp;60–90 | Detection exercises; tune noisy rules; risk review | <Acronym title="Security Operations Center">SOC</Acronym> + leadership | Go / no-go for larger projects |
+
+</div>
+
+<div className="security-table">
+
+| Control | Accountable role | Evidence of success |
+| --- | --- | --- |
+| Scoped data access | Application owner | Tenant A cannot get tenant B’s rows via supported app paths |
+| Recovery independence | Backup / security | Prod admin cannot change protected retention or required recovery keys |
+| Audit health | <Acronym title="Security Operations Center">SOC</Acronym> | Broken test feed alerts the on-call responder |
+| Recoverability | DBA + business owner | Isolated restore meets targets and passes reconciliation |
+
+</div>
+
+Plan <Acronym title="Identity Provider">IdP</Acronym> and network changes with dependency checks and a rollback path — security work should not cause avoidable outages.
+
+Large rebuilds, new <Acronym title="Security Operations Center">SOC</Acronym> platforms, or engine migrations can still be right — **after** exposure, <Acronym title="Multi-Factor Authentication">MFA</Acronym>, backup separation, and a restore drill show where the real gaps are. An unsupported database version may **force** migration; sequence by risk, not by slide deck.
+
+---
+
+<h2 id="myths">10. Myths</h2>
+
+<div className="security-table">
+
+| Myth | Reality |
+| --- | --- |
+| “<Acronym title="Transparent Data Encryption">TDE</Acronym> means we’re safe” | <Acronym title="Transparent Data Encryption">TDE</Acronym> does not block authorized queries |
+| “<Acronym title="Bring Your Own Key">BYOK</Acronym> means the cloud never sees plaintext” | Authorized services may still use keys per <Acronym title="Key Management Service">KMS</Acronym> design; <Acronym title="Bring Your Own Key">BYOK</Acronym> is custody/authorization, not automatic exclusion |
+| “Replicas are our DR” | Replicas mirror writes — good for availability, not a substitute for point-in-time backup |
+| “Backups are immutable” | Test retention modes, key access, and admin paths — objects can remain while keys are gone |
+| “The firewall handles it” | Stolen credentials ride allowed paths |
+| “No alerts means no breach” | Living-off-the-land can be quiet |
+| “In-country hosting = sovereign” | Location helps, but without admin, key, and copy control it is incomplete — see [Nepal: policy vs proof](#nepal-lens) |
+
+</div>
+
+---
+
+<h2 id="checklist">Closing checklist</h2>
+
+Use this as a short pass/fail list. For Nepal-specific evidence language (residency, citizen data, procurement), see [Nepal: policy vs proof](#nepal-lens).
+
+<div className="security-table">
+
+| # | Check | Pass when |
+| --- | --- | --- |
+| 01 | No public database listener | Outside tests cannot reach production database ports |
+| 02 | Named admins + <Acronym title="Multi-Factor Authentication">MFA</Acronym> | Each privileged person has their own account; phishing-resistant MFA at the <Acronym title="Identity Provider">IdP</Acronym> or gateway |
+| 03 | Governed exports | Bulk extracts need approval and monitoring; app roles only see what they need |
+| 04 | Right crypto layer | <Acronym title="Transparent Data Encryption">TDE</Acronym> (or equivalent) for files/backups; column or app encryption where DBAs must not see values |
+| 05 | Recovery independence | A simulated production admin cannot change protected retention or required recovery keys |
+| 06 | Off-host audit | Stopping the log forwarder creates an alert to a named owner |
+| 07 | Proven restore | Clean-room restore + business check within your policy window (for example 90 days) |
+| 08 | Actionable alerts | Unusual exports, privilege grants, and retention changes reach someone who can act |
+
+</div>
+
+Strong database defense is **identity + authorization + crypto boundaries + governed copies + independent recovery + behavior detection**, checked with exercises — so data stays with the people and institutions it belongs to, not whoever holds the next valid-looking session.
+
+**Related:** [Always Encrypted in SQL Server](/blog/always-encrypted-sql-server-practical-guide/) · [SQL Server ransomware defense](/blog/sql-server-security-ransomware-resilient-backups/) · [Nepal: policy vs proof](#nepal-lens)
+
+---
+
+<h2 id="nepal-lens">Nepal: policy vs proof</h2>
+
+*This sidebar is for operators and procurement teams in Nepal. The rest of the article is global; use this section when privacy, cybersecurity, data residency, or financial resilience expectations apply locally.*
+
+Policies on paper are a start. Auditors and citizens care about **proof**: an up-to-date copy inventory, independent backup access, control of encryption keys, and a restore that worked in a clean room. The same doors in [The idea in simple terms](#plain-english) and the same estate parts in [Typical database estates](#current-state) still apply — location alone does not close them.
+
+<figure className="security-section-visual">
+  <img src="/images/blog/attack-surface/nepal-data-sovereignty.svg" alt="Regulated estates: on-paper controls versus missing copy inventory, key custody, and clean-room restore proof" />
+  <figcaption><strong>Hosting in-country is one piece.</strong> Admins, keys, support paths, and telemetry decide whether data stays inside the boundary you intend.</figcaption>
+</figure>
+
+Practical checks for operators and procurement:
+
+1. **Location is not custody.** A server in Kathmandu still leaks if a vendor session or shared DBA password can export or delete recovery.
+2. **Outages erode trust quickly.** Trading or citizen-facing downtime becomes a confidence problem — restore success alone does not answer whether rows were copied or altered.
+3. **Questionnaire rows ≠ denied export.** ISO-style checklists do not replace a test where tenant A cannot read tenant B.
+4. **Spend follows evidence.** National platform rebuilds, engine swaps “for security,” or new <Acronym title="Security Operations Center">SOC</Acronym> tools wait behind public listener removal, <Acronym title="Multi-Factor Authentication">MFA</Acronym>, backup separation, and a restore drill — unless law or unsupported software forces a faster migration.
+5. **Privacy is concrete.** National IDs, tax and land fields, and health-adjacent data belong in scoped apps — not on contractor laptops or untracked BI dumps.
+
+When you write acceptance criteria for a Nepal-hosted system, reuse the [closing checklist](#checklist) and ask for the same evidence: denied cross-tenant reads, admin-delete denial on locked backups, and a signed restore drill.
+
+---
+
+<h2 id="further-study">Learning resources (defenders)</h2>
+
+Use ethical-hacking and secure-development material to build **detection and authorization tests** in environments you own or have written permission to test.
+
+<div className="ae-note"><strong>Rule:</strong> labs and contracts only — never use these skills against systems you do not administer.</div>
+
+<div className="security-table">
+
+| Resource | What defenders learn | Link |
+| --- | --- | --- |
+| OWASP WSTG &amp; cheat sheets | Injection, access control, SQL hygiene | [WSTG](https://owasp.org/www-project-web-security-testing-guide/) · [SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html) · [Database Security](https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html) |
+| PortSwigger Web Security Academy | Hands-on injection and auth labs | [portswigger.net/web-security](https://portswigger.net/web-security) |
+| TryHackMe | Blue-team oriented paths | [tryhackme.com](https://tryhackme.com/) |
+| Hack The Box Academy | Guided modules on authorized targets | [academy.hackthebox.com](https://academy.hackthebox.com/) |
+| MITRE ATT&amp;CK | Map behaviors to detection | [attack.mitre.org](https://attack.mitre.org/) |
+| Microsoft Learn | <Acronym title="Transparent Data Encryption">TDE</Acronym>, Always Encrypted, SQL security | [Always Encrypted](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-database-engine) · [<Acronym title="Transparent Data Encryption">TDE</Acronym>](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/transparent-data-encryption) |
+| NIST SP 800-61 Rev. 3 | Incident response | [csrc.nist.gov](https://csrc.nist.gov/pubs/sp/800/61/r3/final) |
+
+</div>
+
+---
+
+<h2 id="sources">Sources</h2>
+
+Each link supports specific claims in this article:
+
+| Source | Date | Supports |
+| --- | --- | --- |
+| [Google Cloud / Mandiant — UNC5537 Snowflake-related customer credential theft](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion?hl=en) | June 2024 | Path A credential theft pattern (customer-side controls) |
+| [GitLab — postmortem of January 2017 database outage](https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/) | Feb 2017 | Backup/restore assumptions vs tested recovery |
+| [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html) | ongoing | Path B secure coding |
+| [OWASP Database Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html) | ongoing | Hardening checklist themes |
+| [Microsoft — Always Encrypted](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-database-engine?view=sql-server-ver17) | ongoing | Section 8.2 crypto boundaries |
+| [Microsoft — TDE](https://learn.microsoft.com/en-us/sql/relational-databases/security/encryption/transparent-data-encryption) | ongoing | TDE scope and backup encryption |
+| [Microsoft — dynamic data masking](https://learn.microsoft.com/en-us/sql/relational-databases/security/dynamic-data-masking?view=sql-server-ver17) | ongoing | DDM limitations |
+| [Microsoft — SQL Server audit records (`response_rows` scope)](https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records?view=sql-server-ver17) | ongoing | Detection table prerequisites |
+| [Microsoft — SqlClient connection security (`TrustServerCertificate`)](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax) | ongoing | TLS validation warning |
+| [AWS — external key stores](https://docs.aws.amazon.com/kms/latest/developerguide/keystore-external.html) | ongoing | BYOK / external key plaintext boundary |
+| [AWS — S3 Object Lock](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html) | ongoing | Retention vs readability |
+| [CISA — AA24-038A (living off the land, critical infrastructure)](https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-038a) | 2024 | Section 6 detection framing |
+| [CISA — Stop Ransomware guide](https://www.cisa.gov/stopransomware/ransomware-guide) | ongoing | Section 8.6 response |
+| [NIST SP 800-61 Rev. 3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) | 2025 | Incident response integration |
+| [Microsoft — Azure Data Studio retirement notice](https://github.com/microsoft/azuredatastudio) | Feb 2026 | Legacy client mention in section 5 |

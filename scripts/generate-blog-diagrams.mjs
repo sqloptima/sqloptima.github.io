@@ -32,7 +32,12 @@ function diagram(kind, labels, colors) {
 
 for (const filename of fs.readdirSync(contentDir).filter((name) => name.endsWith(".mdx"))) {
   const slug = filename.replace(/\.mdx$/u, "");
-  if (slug === "ai-assisted-sql-from-prompting-to-proof") continue;
+  if (
+    slug === "ai-assisted-sql-from-prompting-to-proof" ||
+    slug === "database-attack-surface-defense-practical-guide" ||
+    slug === "sql-server-security-ransomware-resilient-backups" ||
+    slug === "always-encrypted-sql-server-practical-guide"
+  ) continue;
   const parsed = matter(fs.readFileSync(path.join(contentDir, filename), "utf8"));
   const title = String(parsed.data.title);
   const seed = hash(slug);

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="t d">
+  <title id="t">Database vault with many doors</title>
+  <desc id="d">Five doors into a database vault: front door, staff badge, loading dock, master keys, and side alley.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#eaf7ff"/></linearGradient>
+  </defs>
+  <rect width="1200" height="520" fill="url(#bg)"/>
+  <text x="600" y="48" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="28" font-weight="700">THE DATABASE IS A VAULT WITH MANY DOORS</text>
+  <text x="600" y="82" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="16">Disk encryption locks the floor safe - not the person with a badge</text>
+
+  <g font-family="Segoe UI,Arial">
+    <g transform="translate(70 130)">
+      <rect width="200" height="300" rx="20" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect x="20" y="20" width="160" height="90" rx="14" fill="#123c61"/>
+      <text x="100" y="55" text-anchor="middle" fill="#67e8f9" font-size="13" font-weight="700">FRONT DOOR</text>
+      <text x="100" y="80" text-anchor="middle" fill="#d8e9f5" font-size="14">Listener / VPN</text>
+      <text x="100" y="150" text-anchor="middle" fill="#31475a" font-size="15">Public or poorly</text>
+      <text x="100" y="175" text-anchor="middle" fill="#31475a" font-size="15">firewalled ports</text>
+      <text x="100" y="220" text-anchor="middle" fill="#12638a" font-size="13" font-weight="700">HARDEN</text>
+      <text x="100" y="248" text-anchor="middle" fill="#4a6a82" font-size="14">Private only</text>
+      <text x="100" y="272" text-anchor="middle" fill="#4a6a82" font-size="14">No internet DB</text>
+    </g>
+    <g transform="translate(290 130)">
+      <rect width="200" height="300" rx="20" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect x="20" y="20" width="160" height="90" rx="14" fill="#24355f"/>
+      <text x="100" y="55" text-anchor="middle" fill="#c7b6ff" font-size="13" font-weight="700">STAFF BADGE</text>
+      <text x="100" y="80" text-anchor="middle" fill="#e6e0f7" font-size="14">Identity</text>
+      <text x="100" y="150" text-anchor="middle" fill="#31475a" font-size="15">Stolen password,</text>
+      <text x="100" y="175" text-anchor="middle" fill="#31475a" font-size="15">missing MFA</text>
+      <text x="100" y="220" text-anchor="middle" fill="#12638a" font-size="13" font-weight="700">HARDEN</text>
+      <text x="100" y="248" text-anchor="middle" fill="#4a6a82" font-size="14">Named admins</text>
+      <text x="100" y="272" text-anchor="middle" fill="#4a6a82" font-size="14">Phish-resistant MFA</text>
+    </g>
+    <g transform="translate(510 130)">
+      <rect width="200" height="300" rx="20" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect x="20" y="20" width="160" height="90" rx="14" fill="#164b48"/>
+      <text x="100" y="55" text-anchor="middle" fill="#6ee7bd" font-size="13" font-weight="700">LOADING DOCK</text>
+      <text x="100" y="80" text-anchor="middle" fill="#d9f5eb" font-size="14">Exports / ETL</text>
+      <text x="100" y="150" text-anchor="middle" fill="#31475a" font-size="15">BCP, dumps,</text>
+      <text x="100" y="175" text-anchor="middle" fill="#31475a" font-size="15">analytics sync</text>
+      <text x="100" y="220" text-anchor="middle" fill="#12638a" font-size="13" font-weight="700">HARDEN</text>
+      <text x="100" y="248" text-anchor="middle" fill="#4a6a82" font-size="14">Dual-control</text>
+      <text x="100" y="272" text-anchor="middle" fill="#4a6a82" font-size="14">Copy register</text>
+    </g>
+    <g transform="translate(730 130)">
+      <rect width="200" height="300" rx="20" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect x="20" y="20" width="160" height="90" rx="14" fill="#45361b"/>
+      <text x="100" y="55" text-anchor="middle" fill="#fcd34d" font-size="13" font-weight="700">MASTER KEYS</text>
+      <text x="100" y="80" text-anchor="middle" fill="#fce6ad" font-size="14">Privilege</text>
+      <text x="100" y="150" text-anchor="middle" fill="#31475a" font-size="15">DBA, cloud IAM,</text>
+      <text x="100" y="175" text-anchor="middle" fill="#31475a" font-size="15">KMS, backup console</text>
+      <text x="100" y="220" text-anchor="middle" fill="#12638a" font-size="13" font-weight="700">HARDEN</text>
+      <text x="100" y="248" text-anchor="middle" fill="#4a6a82" font-size="14">Separate planes</text>
+      <text x="100" y="272" text-anchor="middle" fill="#4a6a82" font-size="14">HSM / HYOK</text>
+    </g>
+    <g transform="translate(950 130)">
+      <rect width="200" height="300" rx="20" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <rect x="20" y="20" width="160" height="90" rx="14" fill="#4a2430"/>
+      <text x="100" y="55" text-anchor="middle" fill="#fca5a5" font-size="13" font-weight="700">SIDE ALLEY</text>
+      <text x="100" y="80" text-anchor="middle" fill="#fecaca" font-size="14">Supply chain</text>
+      <text x="100" y="150" text-anchor="middle" fill="#31475a" font-size="15">Vendor support,</text>
+      <text x="100" y="175" text-anchor="middle" fill="#31475a" font-size="15">CI/CD identity</text>
+      <text x="100" y="220" text-anchor="middle" fill="#12638a" font-size="13" font-weight="700">HARDEN</text>
+      <text x="100" y="248" text-anchor="middle" fill="#4a6a82" font-size="14">Time-boxed PAM</text>
+      <text x="100" y="272" text-anchor="middle" fill="#4a6a82" font-size="14">Recorded sessions</text>
+    </g>
+  </g>
+</svg>

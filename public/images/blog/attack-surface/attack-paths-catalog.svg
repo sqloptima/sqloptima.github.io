@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-labelledby="t d">
+  <title id="t">Major outsider attack path categories</title>
+  <desc id="d">Nine defensive path categories with icons from stolen sessions through direct exposure and patch debt.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#eaf7ff"/></linearGradient>
+  </defs>
+  <rect width="1200" height="820" fill="url(#bg)"/>
+  <text x="600" y="38" text-anchor="middle" fill="#14324b" font-family="Segoe UI,Arial" font-size="24" font-weight="700">HOW OUTSIDERS REACH DATA - PATH CATEGORIES</text>
+  <text x="600" y="64" text-anchor="middle" fill="#4a6a82" font-family="Segoe UI,Arial" font-size="15">Defensive catalog of outcomes - not exploit recipes</text>
+
+  <g font-family="Segoe UI,Arial">
+    <!-- A -->
+    <g transform="translate(40 90)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#123c61"/><circle cx="36" cy="32" r="7" fill="none" stroke="#67e8f9" stroke-width="2"/><path d="M26 46c4-6 16-6 20 0" fill="none" stroke="#67e8f9" stroke-width="2"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">A  Valid session</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">stolen login</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Phish -&gt; login -&gt; export</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">Authorized principal abuse</text>
+    </g>
+    <!-- B -->
+    <g transform="translate(420 90)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#164b48"/><rect x="26" y="26" width="20" height="16" rx="2" fill="none" stroke="#6ee7bd" stroke-width="2"/><path d="M30 42h12" stroke="#6ee7bd" stroke-width="2"/><path d="M30 30h8M30 35h5" stroke="#6ee7bd" stroke-width="1.8"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">B  Application abuse</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">injection / authz</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Broken checks or inject</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">DB trusts the app identity</text>
+    </g>
+    <!-- C -->
+    <g transform="translate(800 90)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#24355f"/><path d="M28 40h16M36 28v16" stroke="#c7b6ff" stroke-width="2.5"/><circle cx="36" cy="36" r="5" fill="none" stroke="#c7b6ff" stroke-width="2"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">C  Admin / pipeline</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">DBA, IAM, CI/CD</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Phish DBA or poison deploy</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">Management plane value</text>
+    </g>
+
+    <!-- D -->
+    <g transform="translate(40 230)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#78350f"/><path d="M28 42h16v-10h-16z" fill="none" stroke="#fcd34d" stroke-width="2"/><path d="M32 32v-4h8v4" stroke="#fcd34d" stroke-width="2"/><path d="M36 36v4" stroke="#fcd34d" stroke-width="2"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">D  Recovery first</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">kill backups</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Delete copies / destroy keys</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">Then ransomware leverage</text>
+    </g>
+    <!-- E -->
+    <g transform="translate(420 230)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#0c4a6e"/><rect x="26" y="28" width="20" height="16" rx="2" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M30 34h12M30 40h8" stroke="#7dd3fc" stroke-width="2"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">E  Living off the land</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">native tools</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">sqlcmd, bcp, PowerShell</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">No malware signature</text>
+    </g>
+    <!-- F -->
+    <g transform="translate(800 230)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#4a2430"/><path d="M28 30h16v16H28z" fill="none" stroke="#fca5a5" stroke-width="2"/><path d="M32 38h8M36 34v8" stroke="#fca5a5" stroke-width="2"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">F  Integrity attack</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">silent edits</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Change land / tax / balance</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">Replicas spread the lie</text>
+    </g>
+
+    <!-- G -->
+    <g transform="translate(40 370)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#7f1d1d"/><path d="M26 42c4-12 16-12 20 0" fill="none" stroke="#fecaca" stroke-width="2"/><path d="M30 36h12M36 30v12" stroke="#fecaca" stroke-width="2"/><circle cx="36" cy="36" r="2.5" fill="#fecaca"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">G  Availability</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">outage path</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Saturate links or kill KMS</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">Outage without DB hack</text>
+    </g>
+    <!-- H -->
+    <g transform="translate(420 370)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#155e75"/><path d="M28 40h16M36 28l8 8-8 8" fill="none" stroke="#a5f3fc" stroke-width="2"/><circle cx="28" cy="40" r="2.5" fill="#a5f3fc"/><circle cx="44" cy="36" r="2.5" fill="#a5f3fc"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">H  Cross-copy</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">supply chain</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Contractor / SaaS sync</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">Rows leave the boundary</text>
+    </g>
+    <!-- I -->
+    <g transform="translate(800 370)">
+      <rect width="360" height="120" rx="14" fill="#fff" stroke="#7eb8d8" stroke-width="2"/>
+      <circle cx="36" cy="36" r="20" fill="#1e3a5f"/><path d="M26 40h20M30 40v6h12v-6" fill="none" stroke="#93c5fd" stroke-width="2"/><path d="M32 34l4-8 4 8" fill="none" stroke="#93c5fd" stroke-width="2"/><circle cx="36" cy="28" r="2.2" fill="#fbbf24"/>
+      <text x="68" y="30" fill="#12638a" font-size="15" font-weight="700">I  Direct exposure</text>
+      <text x="68" y="50" fill="#4a6a82" font-size="12">public ports / CVEs</text>
+      <text x="20" y="84" fill="#31475a" font-size="13">Internet SQL/RDP or patch debt</text>
+      <text x="20" y="104" fill="#64748b" font-size="12">Foothold then lateral move</text>
+    </g>
+
+    <rect x="40" y="520" width="1120" height="260" rx="18" fill="#0a223c" stroke="#67e8f9" stroke-width="2"/>
+    <text x="600" y="565" text-anchor="middle" fill="#67e8f9" font-size="20" font-weight="700">ATTACKER OUTCOMES - 24/7 PRESSURE</text>
+
+    <g transform="translate(80 600)">
+      <circle cx="40" cy="30" r="24" fill="#123c61" stroke="#67e8f9"/><path d="M32 30h16M40 22v16" stroke="#67e8f9" stroke-width="2"/>
+      <text x="40" y="78" text-anchor="middle" fill="#e9f6fd" font-size="15" font-weight="700">Copy data</text>
+      <text x="40" y="100" text-anchor="middle" fill="#8fc8e8" font-size="12">extortion / resale</text>
+    </g>
+    <g transform="translate(360 600)">
+      <circle cx="40" cy="30" r="24" fill="#123c61" stroke="#fbbf24"/><path d="M32 24h16v20H32z" fill="none" stroke="#fbbf24" stroke-width="2"/><path d="M36 34h8" stroke="#fbbf24" stroke-width="2"/>
+      <text x="40" y="78" text-anchor="middle" fill="#e9f6fd" font-size="15" font-weight="700">Alter records</text>
+      <text x="40" y="100" text-anchor="middle" fill="#8fc8e8" font-size="12">fraud that looks valid</text>
+    </g>
+    <g transform="translate(640 600)">
+      <circle cx="40" cy="30" r="24" fill="#123c61" stroke="#f87171"/><path d="M30 30h20M40 20v20" stroke="#f87171" stroke-width="2.5" transform="rotate(45 40 30)"/>
+      <text x="40" y="78" text-anchor="middle" fill="#e9f6fd" font-size="15" font-weight="700">Deny service</text>
+      <text x="40" y="100" text-anchor="middle" fill="#8fc8e8" font-size="12">business stoppage</text>
+    </g>
+    <g transform="translate(920 600)">
+      <circle cx="40" cy="30" r="24" fill="#123c61" stroke="#34d399"/><path d="M32 36h16v-10h-16z" fill="none" stroke="#34d399" stroke-width="2"/><path d="M36 26v-4h8v4" stroke="#34d399" stroke-width="2"/>
+      <text x="40" y="78" text-anchor="middle" fill="#e9f6fd" font-size="15" font-weight="700">Seize recovery</text>
+      <text x="40" y="100" text-anchor="middle" fill="#8fc8e8" font-size="12">payment leverage</text>
+    </g>
+  </g>
+</svg>
